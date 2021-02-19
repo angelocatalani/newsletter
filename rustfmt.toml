@@ -1,9 +1,1 @@
-condense_wildcard_suffixes = true
-edition = "2018"
-error_on_line_overflow = true
-error_on_unformatted = true
-format_code_in_doc_comments = true
-format_strings = true
-imports_layout = "Vertical"
-unstable_features = true
-wrap_comments = true
+
