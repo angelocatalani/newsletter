@@ -19,8 +19,11 @@ async fn health_check_works() {
 /// `actix_rt::test` spins up a new runtime at the beginning of each test case
 /// and they shut down at the end of each test case.
 fn spawn_app() -> String {
+    // the tcp listens on the ip:port. It does not matter the protocol
     let tcp_listener = TcpListener::bind("127.0.0.1:0").expect("tcp error binding to port");
     let port = tcp_listener.local_addr().unwrap().port();
     tokio::spawn(newsletter::run(tcp_listener).expect("server error binding to address"));
-    format!("127.0.0.1:{}", port)
+
+    // the request is done with the protocol:ip:port
+    format!("http://127.0.0.1:{}", port)
 }
