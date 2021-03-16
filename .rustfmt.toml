@@ -1,4 +1,3 @@
-# this is not versioned to avoid installing the nightly toolchain in the CI
 condense_wildcard_suffixes = true
 edition = "2018"
 error_on_line_overflow = true
