@@ -1,7 +1,16 @@
 //! The `newsletter` entry point.
 
 use actix_web::dev::Server;
-use actix_web::{guard, web, App, HttpRequest, HttpResponse, HttpServer, Responder, Route};
+use actix_web::{
+    guard,
+    web,
+    App,
+    HttpRequest,
+    HttpResponse,
+    HttpServer,
+    Responder,
+    Route,
+};
 use std::net::TcpListener;
 
 const MAX_PENDING_CONNECTION: u32 = 128;
