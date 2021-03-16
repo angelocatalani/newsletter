@@ -1,6 +1,8 @@
 //! The `newsletter` entry point.
 
+use actix_web::dev::Server;
 use actix_web::{guard, web, App, HttpRequest, HttpResponse, HttpServer, Responder, Route};
+use std::net::TcpListener;
 
 const MAX_PENDING_CONNECTION: u32 = 128;
 
@@ -13,7 +15,7 @@ async fn greet(req: HttpRequest) -> impl Responder {
     format!("Hello {}!", &name)
 }
 
-pub async fn run() -> std::io::Result<()> {
+pub fn run(tcp_listener: TcpListener) -> std::io::Result<Server> {
     // HttpServer handles all transport level concerns.
     HttpServer::new(|| {
         // App is where all the application logic lives: routing, middlewares, request
@@ -35,7 +37,6 @@ pub async fn run() -> std::io::Result<()> {
             .route("/health_check", web::get().to(health_check))
     })
     .backlog(MAX_PENDING_CONNECTION)
-    .bind("127.0.0.1:8000")?
-    .run()
-    .await
+    .listen(tcp_listener)
+    .map(HttpServer::run)
 }
