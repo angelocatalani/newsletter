@@ -16,6 +16,5 @@ script: |
   cargo clippy -- -D warnings &&
   cargo build &&
   cargo test &&
-  cargo audit
 after_success: |
   cargo tarpaulin --ignore-tests
