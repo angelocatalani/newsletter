@@ -1,27 +1,39 @@
 //! The `newsletter` entry point.
 
-use actix_web::dev::Server;
+use std::net::TcpListener;
+
 use actix_web::{
-    guard,
-    web,
     App,
+    guard,
     HttpRequest,
     HttpResponse,
     HttpServer,
     Responder,
     Route,
+    web,
 };
-use std::net::TcpListener;
+use actix_web::dev::Server;
+use serde::Deserialize;
 
 const MAX_PENDING_CONNECTION: u32 = 128;
 
-async fn health_check(_req: HttpRequest) -> impl Responder {
-    HttpResponse::Ok()
+async fn health_check(_req: HttpRequest) -> HttpResponse {
+    HttpResponse::Ok().finish()
 }
 
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");
     format!("Hello {}!", &name)
+}
+
+#[derive(Deserialize)]
+struct FormData {
+    name: String,
+    email: String,
+}
+
+async fn subscribe(_form: web::Form<FormData>) -> HttpResponse {
+    HttpResponse::Ok().finish()
 }
 
 pub fn run(tcp_listener: TcpListener) -> std::io::Result<Server> {
@@ -44,8 +56,9 @@ pub fn run(tcp_listener: TcpListener) -> std::io::Result<Server> {
                     .to(greet),
             )
             .route("/health_check", web::get().to(health_check))
+            .route("/subscriptions", web::post().to(subscribe))
     })
-    .backlog(MAX_PENDING_CONNECTION)
-    .listen(tcp_listener)
-    .map(HttpServer::run)
+        .backlog(MAX_PENDING_CONNECTION)
+        .listen(tcp_listener)
+        .map(HttpServer::run)
 }
