@@ -15,6 +15,6 @@ script: |
   cargo +nightly fmt --all -- --check &&
   cargo clippy -- -D warnings &&
   cargo build &&
-  cargo test &&
+  cargo test
 after_success: |
   cargo tarpaulin --ignore-tests
