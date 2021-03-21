@@ -16,7 +16,7 @@ NEWSLETTER_DB_NAME="${NEWSLETTER_DB_NAME:=newsletter}"
 NEWSLETTER_DB_PORT="${NEWSLETTER_DB_PORT:=9000}"
 NEWSLETTER_DB_URL="postgres://${NEWSLETTER_DB_USER}:${NEWSLETTER_DB_PASSWORD}@localhost:${NEWSLETTER_DB_PORT}/${NEWSLETTER_DB_NAME}"
 
-if [[ -z "${SKIP_DOCKER}" ]]; then
+if [[ -z "${SKIP_DOCKER:=false}" ]]; then
   POSTGRES_CONTAINER_ID=$(docker run \
     -e POSTGRES_USER="${NEWSLETTER_DB_USER}" \
     -e POSTGRES_PASSWORD="${NEWSLETTER_DB_PASSWORD}" \
@@ -44,3 +44,4 @@ echo >&2 "postgres has been migrated, ready to go!"
 
 # restore the previous database url to avoid conflicts with other projects
 DATABASE_URL="${PREVIOUS_DATABASE_URL}"
+
