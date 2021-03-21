@@ -1,0 +1,12 @@
+[application]
+host = "127.0.0.1"
+max_pending_connections = 128
+port = 8000
+
+[database]
+database_name = "newsletter"
+host = "localhost"
+password = "password"
+port = 9000
+username = "postgres"
+max_db_connections=16

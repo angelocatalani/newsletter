@@ -2,43 +2,38 @@
 
 use std::net::TcpListener;
 
-use actix_web::dev::Server;
 use actix_web::{
-    guard,
-    web,
     App,
+    guard,
     HttpRequest,
-    HttpResponse,
     HttpServer,
     Responder,
     Route,
+    web,
 };
-use serde::Deserialize;
+use actix_web::dev::Server;
+use sqlx::PgPool;
 
-const MAX_PENDING_CONNECTION: u32 = 128;
+use crate::routes::*;
 
-async fn health_check(_req: HttpRequest) -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
+pub mod configuration;
+mod routes;
+mod startup;
 
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");
     format!("Hello {}!", &name)
 }
 
-#[derive(Deserialize)]
-struct FormData {
-    name: String,
-    email: String,
-}
+pub fn run(
+    tcp_listener: TcpListener,
+    postgres_pool: PgPool,
+    max_pending_connections: u32,
+) -> std::io::Result<Server> {
+    let web_data_pool = web::Data::new(postgres_pool);
 
-async fn subscribe(_form: web::Form<FormData>) -> HttpResponse {
-    HttpResponse::Ok().finish()
-}
-
-pub fn run(tcp_listener: TcpListener) -> std::io::Result<Server> {
     // HttpServer handles all transport level concerns.
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         // App is where all the application logic lives: routing, middlewares, request
         // handlers, etc.
         App::new()
@@ -56,9 +51,13 @@ pub fn run(tcp_listener: TcpListener) -> std::io::Result<Server> {
                     .to(greet),
             )
             .route("/health_check", web::get().to(health_check))
+            // we need to clone the input connection  because the current closure will be called
+            // multiple times (in fact it is of type Fn not FnOnce) and the input connection
+            // would not be available anymore at the next call otherwise.
             .route("/subscriptions", web::post().to(subscribe))
+            .app_data(web_data_pool.clone())
     })
-    .backlog(MAX_PENDING_CONNECTION)
+    .backlog(max_pending_connections)
     .listen(tcp_listener)
     .map(HttpServer::run)
 }
