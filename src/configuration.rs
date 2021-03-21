@@ -35,28 +35,43 @@ impl ApplicationSettings {
 }
 
 impl DatabaseSettings {
-    pub fn connection_string(&self) -> String {
+    pub fn database_connection_url(&self) -> String {
         format!(
             "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.database_name
         )
     }
+    pub fn pgserver_connection_url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/",
+            self.username, self.password, self.host, self.port
+        )
+    }
 }
+
 /// Load the configuration from the directory: `configuration`.
-/// If the `RUN_MODE` env variable is not set to `local` or `production`,
-/// it fails.
+///
+/// It fails if:
+/// - the `RUN_MODE` env variable is not set
+/// - the `configuration/base` file is missing
+/// - the `configuration/${RUN_MODE}` file is missing
+/// - the `configuration/*` files have missing or unexpected fields
 ///
 /// # Examples
 ///
 /// ```rust
 /// use newsletter::configuration::load_configuration;
 ///
-/// load_configuration().expect("error loading configuration");
+/// load_configuration();
 /// ```
-pub fn load_configuration() -> Result<Settings, config::ConfigError> {
+pub fn load_configuration() -> Settings {
     let mut config = Config::new();
-    config.merge(File::with_name("configuration/base"))?;
+    config
+        .merge(File::with_name("configuration/base"))
+        .expect("error loading configuration/base");
     let env = env::var("RUN_MODE").expect("RUN_MODE env variable is not set");
-    config.merge(File::with_name(&format!("configuration/{}", env)))?;
-    config.try_into()
+    config
+        .merge(File::with_name(&format!("configuration/{}", env)))
+        .unwrap_or_else(|_| panic!("error loading configuration/{}", env));
+    config.try_into().expect("error loading configuration")
 }

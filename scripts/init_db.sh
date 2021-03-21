@@ -40,7 +40,7 @@ export DATABASE_URL="${NEWSLETTER_DB_URL}"
 sqlx database create
 sqlx migrate run
 
->&2 echo "postgres has been migrated, ready to go!"
+echo >&2 "postgres has been migrated, ready to go!"
 
 # restore the previous database url to avoid conflicts with other projects
 DATABASE_URL="${PREVIOUS_DATABASE_URL}"

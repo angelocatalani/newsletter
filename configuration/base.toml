@@ -9,4 +9,4 @@ host = "localhost"
 password = "password"
 port = 9000
 username = "postgres"
-max_db_connections=16
+max_db_connections = 16
