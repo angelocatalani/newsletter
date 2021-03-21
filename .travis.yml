@@ -12,6 +12,7 @@ before_script:
 # everything in one large command instead of multiple commands.
 # In this way, the build stops immediately if one of the commands fails.
 script: |
+  sh scripts/init_db.sh
   cargo +nightly fmt --all -- --check &&
   cargo clippy -- -D warnings &&
   cargo build &&
