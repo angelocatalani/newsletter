@@ -3,7 +3,7 @@
 # fails if any command fails
 set -x
 # fails if any pipe fails
-set -eo pipefail
+set -edat pipefail
 # fails if any env variable is not set
 set -o nounset
 
