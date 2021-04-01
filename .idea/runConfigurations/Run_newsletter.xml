@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run newsletter" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="run --package newsletter --bin newsletter" />
+    <option name="command" value="run  --package newsletter --bin newsletter" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />
@@ -10,6 +10,7 @@
     <envs>
       <env name="DATABASE_URL" value="postgres://postgres:password@localhost:9000/newsletter" />
       <env name="RUN_MODE" value="local" />
+      <env name="RUST_LOG" value="trace" />
     </envs>
     <option name="isRedirectInput" value="false" />
     <option name="redirectInputPath" value="" />
