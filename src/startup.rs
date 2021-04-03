@@ -13,6 +13,7 @@ use actix_web::{
 use sqlx::PgPool;
 
 use crate::routes::*;
+use tracing_actix_web::TracingLogger;
 
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");
@@ -31,6 +32,7 @@ pub fn run(
         // App is where all the application logic lives: routing, middlewares, request
         // handlers, etc.
         App::new()
+            .wrap(TracingLogger)
             // route takes two parameters: path and route
             // path -> template string
             // route -> Route Struct implements the Route trait.

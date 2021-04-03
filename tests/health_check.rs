@@ -1,5 +1,3 @@
-use std::net::TcpListener;
-
 use reqwest::Response;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{
@@ -10,6 +8,13 @@ use sqlx::{
 use uuid::Uuid;
 
 use newsletter::configuration::load_configuration;
+use newsletter::telemetry::setup_tracing;
+use std::net::TcpListener;
+
+// ensure the `tracing` is instantiated only once
+lazy_static::lazy_static! {
+ static ref TRACING: () = setup_tracing("test".into(),"debug".into());
+}
 
 struct TestApp {
     address: String,
@@ -90,6 +95,7 @@ async fn subscribe_returns_a_400_with_invalid_form() {
 /// `actix_rt::test` spins up a new runtime at the beginning of each test case
 /// and they shut down at the end of each test case.
 async fn spawn_app() -> TestApp {
+    lazy_static::initialize(&TRACING);
     let configuration = load_configuration();
 
     // the tcp listens on the ip:port. It does not matter the protocol

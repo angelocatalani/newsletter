@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="All Tests" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-    <option name="command" value="test" />
+    <option name="command" value="test -- --nocapture" />
     <option name="workingDirectory" value="file://$PROJECT_DIR$" />
     <option name="channel" value="DEFAULT" />
     <option name="requiredFeatures" value="true" />
@@ -10,6 +10,7 @@
     <envs>
       <env name="DATABASE_URL" value="postgres://postgres:password@localhost:9000/newsletter" />
       <env name="RUN_MODE" value="local" />
+      <env name="RUST_LOG" value="debug" />
     </envs>
     <option name="isRedirectInput" value="false" />
     <option name="redirectInputPath" value="" />
