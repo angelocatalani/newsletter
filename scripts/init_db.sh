@@ -3,7 +3,7 @@
 # fails if any command fails
 set -x
 # fails if any pipe fails
-set -edat pipefail
+set -e pipefail
 # fails if any env variable is not set
 set -o nounset
 
@@ -16,7 +16,7 @@ NEWSLETTER_DB_NAME="${NEWSLETTER_DB_NAME:=newsletter}"
 NEWSLETTER_DB_PORT="${NEWSLETTER_DB_PORT:=9000}"
 NEWSLETTER_DB_URL="postgres://${NEWSLETTER_DB_USER}:${NEWSLETTER_DB_PASSWORD}@localhost:${NEWSLETTER_DB_PORT}/${NEWSLETTER_DB_NAME}"
 
-if [[ -z "${SKIP_DOCKER:=false}" ]]; then
+if [ "$WITH_DOCKER" = true ] ; then
   POSTGRES_CONTAINER_ID=$(docker run \
     -e POSTGRES_USER="${NEWSLETTER_DB_USER}" \
     -e POSTGRES_PASSWORD="${NEWSLETTER_DB_PASSWORD}" \

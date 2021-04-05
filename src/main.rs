@@ -17,6 +17,7 @@ async fn main() -> std::io::Result<()> {
     let postgres_pool = postgres_pool(
         &configuration.database.database_connection_url(),
         configuration.database.max_db_connections,
+        configuration.database.connect_timeout_seconds
     )
     .await;
 
@@ -28,8 +29,9 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-async fn postgres_pool(database_url: &str, max_connections: u32) -> PgPool {
+async fn postgres_pool(database_url: &str, max_connections: u32,connect_timeout_seconds:u64) -> PgPool {
     PgPoolOptions::new()
+        .connect_timeout(std::time::Duration::from_secs(connect_timeout_seconds))
         .max_connections(max_connections)
         .connect(database_url)
         .await

@@ -9,7 +9,7 @@
     <option name="backtrace" value="SHORT" />
     <envs>
       <env name="DATABASE_URL" value="postgres://postgres:password@localhost:9000/newsletter" />
-      <env name="RUN_MODE" value="local" />
+      <env name="APP_ENVIRONMENT" value="local" />
       <env name="RUST_LOG" value="debug" />
     </envs>
     <option name="isRedirectInput" value="false" />

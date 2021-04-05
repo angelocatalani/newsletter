@@ -20,6 +20,7 @@ pub struct ApplicationSettings {
 
 #[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
+    pub connect_timeout_seconds: u64,
     pub database_name: String,
     pub host: String,
     pub password: String,
@@ -54,7 +55,7 @@ impl DatabaseSettings {
 /// It fails if:
 /// - the `RUN_MODE` env variable is not set
 /// - the `configuration/base` file is missing
-/// - the `configuration/${RUN_MODE}` file is missing
+/// - the `configuration/${APP_ENVIRONMENT}` file is missing
 /// - the `configuration/*` files have missing or unexpected fields
 ///
 /// # Examples
@@ -67,11 +68,16 @@ impl DatabaseSettings {
 pub fn load_configuration() -> Settings {
     let mut config = Config::new();
     config
-        .merge(File::with_name("configuration/base"))
+        .merge(File::with_name("configuration/base").required(true))
         .expect("error loading configuration/base");
-    let env = env::var("RUN_MODE").expect("RUN_MODE env variable is not set");
+    let app_environment = env::var("APP_ENVIRONMENT").expect("APP_ENVIRONMENT env variable is not set");
     config
-        .merge(File::with_name(&format!("configuration/{}", env)))
-        .unwrap_or_else(|_| panic!("error loading configuration/{}", env));
+        .merge(File::with_name(&format!("configuration/{}", app_environment)).required(true))
+        .unwrap_or_else(|_| panic!("error loading configuration/{}", app_environment));
+
+    // Add in settings from environment variables (with a prefix of APP and '__' as separator)
+    // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port` settings.merge(config::Environment::with_prefix("app").separator("__"))?;
+    config.merge(config::Environment::with_prefix("app").separator("__")).expect("error loading configuration from environment variables");
+
     config.try_into().expect("error loading configuration")
 }
