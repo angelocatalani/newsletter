@@ -3,6 +3,21 @@ on:
   push:
     branches:
       - master
+    paths:
+      - '.github/**'
+      - 'configuration/**'
+      - 'migrations/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'tests/**'
+      - '.dockerignore'
+      - '.gitignore'
+      - '.rustfmt.toml'
+      - 'Cargo.toml'
+      - 'spec.yaml'
+      - 'Dockerfile'
+      - 'spec.yaml'
+      - 'sqlx-data.json'
 jobs:
   fmt:
     name: Rustfmt
@@ -24,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ENVIRONMENT: local
+      APP_NAME: newsletter
+      DOCKER_REPOSITORY: angeloft
       NEWSLETTER_DB_USER: postgres
       NEWSLETTER_DB_PASSWORD: password
       NEWSLETTER_DB_NAME: newsletter
@@ -49,6 +66,8 @@ jobs:
         run: |
           cargo install --version=0.5.1 --locked sqlx-cli --no-default-features --features postgres
           WITH_DOCKER=true ./scripts/init_db.sh
+      - name: Check sqlx metadata file
+        run: cargo sqlx prepare --check -- --bin $APP_NAME
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -75,10 +94,10 @@ jobs:
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: doctl registry login --expiry-seconds 1200
       - name: Build container image
-        run: docker build -t registry.digitalocean.com/angeloft/newsletter:$(echo $GITHUB_SHA | head -c7) .
+        run: docker build -t registry.digitalocean.com/$DOCKER_REPOSITORY/$APP_NAME:$(echo $GITHUB_SHA | head -c7) .
       - name: Push image to DigitalOcean Container Registry
-        run: docker push registry.digitalocean.com/angeloft/newsletter:$(echo $GITHUB_SHA | head -c7)
+        run: docker push registry.digitalocean.com/$DOCKER_REPOSITORY/$APP_NAME:$(echo $GITHUB_SHA | head -c7)
       - name: Update deployment file
-        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/angeloft/newsletter:'${TAG}'|' $GITHUB_WORKSPACE/spec.yaml
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/$DOCKER_REPOSITORY/$APP_NAME:'${TAG}'|' $GITHUB_WORKSPACE/spec.yaml
       - name: Deploy to DigitalOcean Apps
         run: doctl apps create-deployment $(doctl apps list --format ID --no-header) --wait
