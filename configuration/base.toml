@@ -1,4 +1,5 @@
 [application]
+host = "127.0.0.1"
 max_pending_connections = 128
 port = 8000
 
@@ -6,7 +7,8 @@ port = 8000
 connect_timeout_seconds = 2
 database_name = "newsletter"
 host = "localhost"
+max_db_connections = 16
 password = "password"
 port = 9000
+require_ssl = false
 username = "postgres"
-max_db_connections = 16

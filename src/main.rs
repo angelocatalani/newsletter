@@ -1,6 +1,9 @@
 use std::net::TcpListener;
 
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{
+    PgConnectOptions,
+    PgPoolOptions,
+};
 use sqlx::PgPool;
 
 use newsletter::configuration::load_configuration;
@@ -15,9 +18,9 @@ async fn main() -> std::io::Result<()> {
     let tcp_listener = TcpListener::bind(configuration.application.binding_address())
         .expect("error binding to tcp address");
     let postgres_pool = postgres_pool(
-        &configuration.database.database_connection_url(),
+        configuration.database.database_connection_options(),
         configuration.database.max_db_connections,
-        configuration.database.connect_timeout_seconds
+        configuration.database.connect_timeout_seconds,
     )
     .await;
 
@@ -29,11 +32,15 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-async fn postgres_pool(database_url: &str, max_connections: u32,connect_timeout_seconds:u64) -> PgPool {
+async fn postgres_pool(
+    database_options: PgConnectOptions,
+    max_connections: u32,
+    connect_timeout_seconds: u64,
+) -> PgPool {
     PgPoolOptions::new()
         .connect_timeout(std::time::Duration::from_secs(connect_timeout_seconds))
         .max_connections(max_connections)
-        .connect(database_url)
+        .connect_with(database_options)
         .await
-        .expect("error creating postgres connection pool")
+        .expect("error creating postgres connection pool:{}")
 }

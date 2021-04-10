@@ -1,5 +1,8 @@
 use reqwest::Response;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{
+    PgConnectOptions,
+    PgPoolOptions,
+};
 use sqlx::{
     Connection,
     PgConnection,
@@ -23,8 +26,8 @@ struct TestApp {
 
 #[actix_rt::test]
 async fn postgres_connection_works() {
-    postgres_connection(&load_configuration().database.pgserver_connection_url()).await;
-    postgres_connection(&load_configuration().database.database_connection_url()).await;
+    postgres_connection(&load_configuration().database.pgserver_connection_options()).await;
+    postgres_connection(&load_configuration().database.database_connection_options()).await;
 }
 
 #[actix_rt::test]
@@ -104,7 +107,7 @@ async fn spawn_app() -> TestApp {
     let port = tcp_listener.local_addr().unwrap().port();
 
     let postgres_pool = setup_test_database(
-        &configuration.database.pgserver_connection_url(),
+        configuration.database.pgserver_connection_options(),
         configuration.database.max_db_connections,
     )
     .await;
@@ -135,8 +138,11 @@ async fn send_post_request(endpoint: &str, body: String) -> Response {
         .expect("Fail to execute post request")
 }
 
-async fn setup_test_database(pgserver_connection_url: &str, max_db_connections: u32) -> PgPool {
-    let mut connection = postgres_connection(pgserver_connection_url).await;
+async fn setup_test_database(
+    pgserver_connection_options: PgConnectOptions,
+    max_db_connections: u32,
+) -> PgPool {
+    let mut connection = postgres_connection(&pgserver_connection_options).await;
 
     let test_database_name = Uuid::new_v4().to_string();
     sqlx::query(&format!("CREATE DATABASE \"{}\"", test_database_name))
@@ -145,7 +151,7 @@ async fn setup_test_database(pgserver_connection_url: &str, max_db_connections: 
         .expect("error creating test database");
 
     let connection_pool = postgres_pool(
-        &format!("{}{}", pgserver_connection_url, test_database_name),
+        pgserver_connection_options.database(&test_database_name),
         max_db_connections,
     )
     .await;
@@ -158,16 +164,16 @@ async fn setup_test_database(pgserver_connection_url: &str, max_db_connections: 
     connection_pool
 }
 
-async fn postgres_connection(database_url: &str) -> PgConnection {
-    PgConnection::connect(database_url)
+async fn postgres_connection(database_options: &PgConnectOptions) -> PgConnection {
+    PgConnection::connect_with(database_options)
         .await
         .expect("error connecting to postgres")
 }
 
-async fn postgres_pool(database_url: &str, max_connections: u32) -> PgPool {
+async fn postgres_pool(database_url: PgConnectOptions, max_connections: u32) -> PgPool {
     PgPoolOptions::new()
         .max_connections(max_connections)
-        .connect(database_url)
+        .connect_with(database_url)
         .await
         .expect("error creating postgres connection pool")
 }

@@ -4,6 +4,10 @@ use config::{
     Config,
     File,
 };
+use sqlx::postgres::{
+    PgConnectOptions,
+    PgSslMode,
+};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -23,10 +27,11 @@ pub struct DatabaseSettings {
     pub connect_timeout_seconds: u64,
     pub database_name: String,
     pub host: String,
+    pub max_db_connections: u32,
     pub password: String,
     pub port: u16,
+    pub require_ssl: bool,
     pub username: String,
-    pub max_db_connections: u32,
 }
 
 impl ApplicationSettings {
@@ -36,17 +41,22 @@ impl ApplicationSettings {
 }
 
 impl DatabaseSettings {
-    pub fn database_connection_url(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database_name
-        )
+    pub fn pgserver_connection_options(&self) -> PgConnectOptions {
+        let ssl_mode = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            PgSslMode::Prefer
+        };
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.username)
+            .password(&self.password)
+            .port(self.port)
+            .ssl_mode(ssl_mode)
     }
-    pub fn pgserver_connection_url(&self) -> String {
-        format!(
-            "postgres://{}:{}@{}:{}/",
-            self.username, self.password, self.host, self.port
-        )
+    pub fn database_connection_options(&self) -> PgConnectOptions {
+        self.pgserver_connection_options()
+            .database(&self.database_name)
     }
 }
 
@@ -70,14 +80,19 @@ pub fn load_configuration() -> Settings {
     config
         .merge(File::with_name("configuration/base").required(true))
         .expect("error loading configuration/base");
-    let app_environment = env::var("APP_ENVIRONMENT").expect("APP_ENVIRONMENT env variable is not set");
+    let app_environment =
+        env::var("APP_ENVIRONMENT").expect("APP_ENVIRONMENT env variable is not set");
     config
         .merge(File::with_name(&format!("configuration/{}", app_environment)).required(true))
         .unwrap_or_else(|_| panic!("error loading configuration/{}", app_environment));
 
-    // Add in settings from environment variables (with a prefix of APP and '__' as separator)
-    // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port` settings.merge(config::Environment::with_prefix("app").separator("__"))?;
-    config.merge(config::Environment::with_prefix("app").separator("__")).expect("error loading configuration from environment variables");
+    // Add in settings from environment variables (with a prefix of APP and '__' as
+    // separator) E.g. `APP_APPLICATION__PORT=5001 would set
+    // `Settings.application.port`
+    // settings.merge(config::Environment::with_prefix("app").separator("__"))?;
+    config
+        .merge(config::Environment::with_prefix("app").separator("__"))
+        .expect("error loading configuration from environment variables");
 
     config.try_into().expect("error loading configuration")
 }

@@ -1,0 +1,84 @@
+name: CI & CD
+on:
+  push:
+    branches:
+      - master
+jobs:
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  test:
+    name: Clippy & Test
+    runs-on: ubuntu-latest
+    env:
+      APP_ENVIRONMENT: local
+      NEWSLETTER_DB_USER: postgres
+      NEWSLETTER_DB_PASSWORD: password
+      NEWSLETTER_DB_NAME: newsletter
+      NEWSLETTER_DB_PORT: 9000
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache dependencies
+        id: cache-dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy
+          override: true
+      - name: Migrate database
+        run: |
+          cargo install --version=0.5.1 --locked sqlx-cli --no-default-features --features postgres
+          WITH_DOCKER=true ./scripts/init_db.sh
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: -- -D warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--ignore-tests'
+
+  build:
+    name: Build & Deploy
+    needs: [fmt,test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@main
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        run: doctl registry login --expiry-seconds 1200
+      - name: Build container image
+        run: docker build -t registry.digitalocean.com/angeloft/newsletter:$(echo $GITHUB_SHA | head -c7) .
+      - name: Push image to DigitalOcean Container Registry
+        run: docker push registry.digitalocean.com/angeloft/newsletter:$(echo $GITHUB_SHA | head -c7)
+      - name: Update deployment file
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/angeloft/newsletter:'${TAG}'|' $GITHUB_WORKSPACE/spec.yaml
+      - name: Deploy to DigitalOcean Apps
+        run: doctl apps create-deployment $(doctl apps list --format ID --no-header) --wait

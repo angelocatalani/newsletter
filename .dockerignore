@@ -1,6 +1,8 @@
 Dockerfile
 migrations/
+notes/
 target/
 tests/
 scripts/
 .env
+.rustfmt.toml
