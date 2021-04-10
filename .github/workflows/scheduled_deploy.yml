@@ -2,9 +2,13 @@ name: Scheduled Deploy
 on:
   schedule:
     - cron: '0 0 30 4 *' # at 00:00 on day-of-month 30 in April
+env:
+  app_name: newsletter
+  docker_registry: angeloft
 jobs:
   build:
     name: Build & Deploy
+    needs: [fmt,test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master
@@ -16,10 +20,10 @@ jobs:
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: doctl registry login --expiry-seconds 1200
       - name: Build container image
-        run: docker build -t registry.digitalocean.com/angeloft/newsletter:$(echo $GITHUB_SHA | head -c7) .
+        run: docker build -t registry.digitalocean.com/${{ env.docker_registry }}/${{ env.app_name }}:$(echo $GITHUB_SHA | head -c7) .
       - name: Push image to DigitalOcean Container Registry
-        run: docker push registry.digitalocean.com/angeloft/newsletter:$(echo $GITHUB_SHA | head -c7)
+        run: docker push registry.digitalocean.com/${{ env.docker_registry }}/${{ env.app_name }}:$(echo $GITHUB_SHA | head -c7)
       - name: Update deployment file
-        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/angeloft/newsletter:'${TAG}'|' $GITHUB_WORKSPACE/spec.yaml
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/${{ env.docker_registry }}/${{ env.app_name }}:'${TAG}'|' $GITHUB_WORKSPACE/spec.yaml
       - name: Deploy to DigitalOcean Apps
         run: doctl apps create-deployment $(doctl apps list --format ID --no-header) --wait
