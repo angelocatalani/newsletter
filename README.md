@@ -5,6 +5,7 @@
 [![Actions Status](https://github.com/angelocatalani/newsletter/actions/workflows/Security%20Audit/badge.svg)](https://github.com/angelocatalani/newsletter/actions)
 [![Actions Status](https://github.com/angelocatalani/newsletter/actions/workflows/Scheduled%20Security%20Audit/badge.svg)](https://github.com/angelocatalani/newsletter/actions)
 [![Actions Status](https://github.com/angelocatalani/newsletter/actions/workflows/Scheduled%20Deploy/badge.svg)](https://github.com/angelocatalani/newsletter/actions)
+[![Actions Status](https://github.com/angelocatalani/newsletter/actions/workflows/ci_and_cd.yml/badge.svg)](https://github.com/angelocatalani/newsletter/actions)
 
 Implementation of the web application described
 in this amazing book: [Zero To Production In Rust](https://www.zero2prod.com/index.html?country=Italy&discount_code=VAT20).
