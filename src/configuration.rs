@@ -2,12 +2,15 @@ use std::env;
 
 use config::{
     Config,
+    ConfigError,
     File,
 };
+use custom_error::custom_error;
 use sqlx::postgres::{
     PgConnectOptions,
     PgSslMode,
 };
+use std::env::VarError;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -60,6 +63,13 @@ impl DatabaseSettings {
     }
 }
 
+custom_error! {
+///! Custom error for missing env variable or invalid configuration files.
+pub ConfigurationError
+    MissingEnvVar{source:VarError} = "{source}",
+    InvalidConfig{source:ConfigError} = "{source}",
+}
+
 /// Load the configuration from the directory: `configuration`.
 ///
 /// It fails if:
@@ -73,26 +83,19 @@ impl DatabaseSettings {
 /// ```rust
 /// use newsletter::configuration::load_configuration;
 ///
-/// load_configuration();
+/// assert!(load_configuration().is_ok());
 /// ```
-pub fn load_configuration() -> Settings {
+pub fn load_configuration() -> Result<Settings, ConfigurationError> {
     let mut config = Config::new();
-    config
-        .merge(File::with_name("configuration/base").required(true))
-        .expect("error loading configuration/base");
-    let app_environment =
-        env::var("APP_ENVIRONMENT").expect("APP_ENVIRONMENT env variable is not set");
-    config
-        .merge(File::with_name(&format!("configuration/{}", app_environment)).required(true))
-        .unwrap_or_else(|_| panic!("error loading configuration/{}", app_environment));
+    config.merge(File::with_name("configuration/base").required(true))?;
+    let app_environment = env::var("APP_ENVIRONMENT")?;
+    config.merge(File::with_name(&format!("configuration/{}", app_environment)).required(true))?;
 
     // Add in settings from environment variables (with a prefix of APP and '__' as
     // separator) E.g. `APP_APPLICATION__PORT=5001 would set
     // `Settings.application.port`
     // settings.merge(config::Environment::with_prefix("app").separator("__"))?;
-    config
-        .merge(config::Environment::with_prefix("app").separator("__"))
-        .expect("error loading configuration from environment variables");
+    config.merge(config::Environment::with_prefix("app").separator("__"))?;
 
-    config.try_into().expect("error loading configuration")
+    config.try_into().map(Ok)?
 }
