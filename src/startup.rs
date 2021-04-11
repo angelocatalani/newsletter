@@ -11,9 +11,9 @@ use actix_web::{
     Route,
 };
 use sqlx::PgPool;
+use tracing_actix_web::TracingLogger;
 
 use crate::routes::*;
-use tracing_actix_web::TracingLogger;
 
 async fn greet(req: HttpRequest) -> impl Responder {
     let name = req.match_info().get("name").unwrap_or("World");

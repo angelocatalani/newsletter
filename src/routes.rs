@@ -1,6 +1,7 @@
-pub use health_check::*;
-pub use subscriptions::*;
+pub use errors::RouteError;
+pub use health_check::health_check;
+pub use subscriptions::subscribe;
 
-pub mod errors;
-pub mod health_check;
-pub mod subscriptions;
+mod errors;
+mod health_check;
+mod subscriptions;

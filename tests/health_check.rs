@@ -1,3 +1,5 @@
+use std::net::TcpListener;
+
 use reqwest::Response;
 use sqlx::postgres::{
     PgConnectOptions,
@@ -12,7 +14,6 @@ use uuid::Uuid;
 
 use newsletter::configuration::load_configuration;
 use newsletter::telemetry::setup_tracing;
-use std::net::TcpListener;
 
 // ensure the `tracing` is instantiated only once
 lazy_static::lazy_static! {
@@ -26,8 +27,20 @@ struct TestApp {
 
 #[actix_rt::test]
 async fn postgres_connection_works() {
-    postgres_connection(&load_configuration().database.pgserver_connection_options()).await;
-    postgres_connection(&load_configuration().database.database_connection_options()).await;
+    postgres_connection(
+        &load_configuration()
+            .unwrap()
+            .database
+            .pgserver_connection_options(),
+    )
+    .await;
+    postgres_connection(
+        &load_configuration()
+            .unwrap()
+            .database
+            .database_connection_options(),
+    )
+    .await;
 }
 
 #[actix_rt::test]
@@ -69,7 +82,7 @@ async fn subscribe_adds_new_record_to_postgres() {
 }
 
 #[actix_rt::test]
-async fn subscribe_returns_a_400_with_invalid_form() {
+async fn subscribe_returns_a_400_with_missing_field() {
     let subscribe_end_point = format!("{}/subscriptions", spawn_app().await.address);
     let invalid_data = vec![
         (String::from(""), String::from("empty message")),
@@ -93,13 +106,37 @@ async fn subscribe_returns_a_400_with_invalid_form() {
     }
 }
 
+#[actix_rt::test]
+async fn subscribe_returns_a_400_with_invalid_fields() {
+    let subscribe_end_point = format!("{}/subscriptions", spawn_app().await.address);
+    let invalid_data = vec![
+        (
+            String::from("name=&email=ursula_le_guin%40gmail.com"),
+            String::from("empty name"),
+        ),
+        (
+            String::from("name=ursula&email="),
+            String::from("empty email"),
+        ),
+    ];
+    for (body, error_message) in invalid_data {
+        let response = send_post_request(&subscribe_end_point, body).await;
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "Subscription with invalid body with {} did not fail",
+            error_message
+        );
+    }
+}
+
 /// When a `tokio` runtime is shut down all tasks spawned on it are dropped.
 ///
 /// `actix_rt::test` spins up a new runtime at the beginning of each test case
 /// and they shut down at the end of each test case.
 async fn spawn_app() -> TestApp {
     lazy_static::initialize(&TRACING);
-    let configuration = load_configuration();
+    let configuration = load_configuration().unwrap();
 
     // the tcp listens on the ip:port. It does not matter the protocol
     let tcp_listener = TcpListener::bind(&format!("{}:0", configuration.application.host))

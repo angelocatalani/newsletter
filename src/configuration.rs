@@ -1,4 +1,5 @@
 use std::env;
+use std::env::VarError;
 
 use config::{
     Config,
@@ -10,7 +11,6 @@ use sqlx::postgres::{
     PgConnectOptions,
     PgSslMode,
 };
-use std::env::VarError;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -66,7 +66,8 @@ impl DatabaseSettings {
 custom_error! {
 ///! Custom error for missing env variable or invalid configuration files.
 pub ConfigurationError
-    MissingEnvVar{source:VarError} = "{source}",
+    MissingEnvVar{source:VarError} = "`APP_ENVIRONMENT` is not set \
+    (possible values: [`local`|`production`]).",
     InvalidConfig{source:ConfigError} = "{source}",
 }
 

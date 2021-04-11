@@ -1,11 +1,11 @@
-use crate::domain::errors::MalformedInput;
-
 use actix_web::http::StatusCode;
 use actix_web::{
     HttpResponse,
     ResponseError,
 };
 use custom_error::custom_error;
+
+use crate::domain::MalformedInput;
 
 custom_error! {
 ///! Error inside route handler

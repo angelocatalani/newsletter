@@ -14,7 +14,8 @@ use newsletter::telemetry::setup_tracing;
 async fn main() -> std::io::Result<()> {
     setup_tracing("zero2prod".into(), "info".into());
 
-    let configuration = load_configuration().expect("error loading configuration");
+    let configuration =
+        load_configuration().unwrap_or_else(|e| panic!("error loading configuration: {}", e));
     let tcp_listener = TcpListener::bind(configuration.application.binding_address())
         .expect("error binding to tcp address");
     let postgres_pool = postgres_pool(

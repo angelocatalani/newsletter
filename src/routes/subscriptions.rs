@@ -1,17 +1,17 @@
-use crate::domain::errors::MalformedInput;
-use crate::domain::new_subscriber::NewSubscriber;
-use crate::routes::errors::RouteError;
-use actix_web::http::StatusCode;
+use std::convert::TryInto;
+
 use actix_web::{
     web,
     HttpResponse,
-    ResponseError,
 };
 use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
-use std::convert::TryInto;
 use uuid::Uuid;
+
+use crate::domain::MalformedInput;
+use crate::domain::NewSubscriber;
+use crate::routes::RouteError;
 
 #[derive(Deserialize)]
 pub struct FormData {
