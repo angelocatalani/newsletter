@@ -16,6 +16,7 @@ use sqlx::postgres::{
 pub struct Settings {
     pub application: ApplicationSettings,
     pub database: DatabaseSettings,
+    pub email_client: EmailClientSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -35,6 +36,12 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub require_ssl: bool,
     pub username: String,
+}
+#[derive(serde::Deserialize)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    pub sender_email: String,
+    pub token: String,
 }
 
 impl ApplicationSettings {

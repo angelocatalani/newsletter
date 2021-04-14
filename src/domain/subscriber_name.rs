@@ -7,7 +7,7 @@ use crate::domain::errors::MalformedInput;
 const FORBIDDEN_CHARS: [char; 9] = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
 const MAX_LENGTH: usize = 256;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SubscriberName(String);
 
 impl TryFrom<String> for SubscriberName {

@@ -13,6 +13,7 @@ use actix_web::{
 use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
 
+use crate::email_client::EmailClient;
 use crate::routes::*;
 
 async fn greet(req: HttpRequest) -> impl Responder {
@@ -24,8 +25,10 @@ pub fn run(
     tcp_listener: TcpListener,
     postgres_pool: PgPool,
     max_pending_connections: u32,
+    email_client: EmailClient,
 ) -> std::io::Result<Server> {
     let web_data_pool = web::Data::new(postgres_pool);
+    let web_data_email_client = web::Data::new(email_client);
 
     // HttpServer handles all transport level concerns.
     HttpServer::new(move || {
@@ -52,6 +55,7 @@ pub fn run(
             // would not be available anymore at the next call otherwise.
             .route("/subscriptions", web::post().to(subscribe))
             .app_data(web_data_pool.clone())
+            .app_data(web_data_email_client.clone())
     })
     .backlog(max_pending_connections)
     .listen(tcp_listener)

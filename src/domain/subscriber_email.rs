@@ -5,6 +5,7 @@ use validator::validate_email;
 use crate::domain::errors::MalformedInput;
 use crate::domain::errors::MalformedInput::InvalidEmail;
 
+#[derive(Clone, Debug)]
 pub struct SubscriberEmail(String);
 
 impl AsRef<str> for SubscriberEmail {

@@ -1,6 +1,9 @@
 use std::net::TcpListener;
 
-use reqwest::Response;
+use reqwest::{
+    Response,
+    Url,
+};
 use sqlx::postgres::{
     PgConnectOptions,
     PgPoolOptions,
@@ -13,7 +16,9 @@ use sqlx::{
 use uuid::Uuid;
 
 use newsletter::configuration::load_configuration;
+use newsletter::email_client::EmailClient;
 use newsletter::telemetry::setup_tracing;
+use std::convert::TryInto;
 
 // ensure the `tracing` is instantiated only once
 lazy_static::lazy_static! {
@@ -154,6 +159,15 @@ async fn spawn_app() -> TestApp {
             // cloning a postgres_pool does not create a new pool but it is always the same
             postgres_pool.clone(),
             configuration.application.max_pending_connections,
+            EmailClient::new(
+                Url::parse(&configuration.email_client.base_url).unwrap(),
+                configuration
+                    .email_client
+                    .sender_email
+                    .try_into()
+                    .expect("wrong sender email in configuration"),
+                configuration.email_client.token,
+            ),
         )
         .expect("server error binding to address"),
     );

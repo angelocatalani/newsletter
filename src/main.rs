@@ -7,8 +7,12 @@ use sqlx::postgres::{
 use sqlx::PgPool;
 
 use newsletter::configuration::load_configuration;
+use newsletter::domain::SubscriberEmail;
+use newsletter::email_client::EmailClient;
 use newsletter::startup::run;
 use newsletter::telemetry::setup_tracing;
+use reqwest::Url;
+use std::convert::TryInto;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -24,11 +28,21 @@ async fn main() -> std::io::Result<()> {
         configuration.database.connect_timeout_seconds,
     )
     .await;
-
+    let sender_email: SubscriberEmail = configuration
+        .email_client
+        .sender_email
+        .try_into()
+        .unwrap_or_else(|e| panic!("invalid sender email: {}", e));
     run(
         tcp_listener,
         postgres_pool,
         configuration.application.max_pending_connections,
+        EmailClient::new(
+            Url::parse(&configuration.email_client.base_url)
+                .unwrap_or_else(|e| panic!("invalid base url for email client: {}", e)),
+            sender_email,
+            configuration.email_client.token,
+        ),
     )?
     .await
 }

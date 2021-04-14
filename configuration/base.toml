@@ -12,3 +12,8 @@ password = "password"
 port = 9000
 require_ssl = false
 username = "postgres"
+
+[email_client]
+base_url = "https://api.postmarkapp.com"
+sender_email = "catalaniangelo@gmail.com"
+token = "test-secret-token"
