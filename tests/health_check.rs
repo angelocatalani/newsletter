@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::net::TcpListener;
 
 use reqwest::{
@@ -18,7 +19,6 @@ use uuid::Uuid;
 use newsletter::configuration::load_configuration;
 use newsletter::email_client::EmailClient;
 use newsletter::telemetry::setup_tracing;
-use std::convert::TryInto;
 
 // ensure the `tracing` is instantiated only once
 lazy_static::lazy_static! {
@@ -167,6 +167,7 @@ async fn spawn_app() -> TestApp {
                     .try_into()
                     .expect("wrong sender email in configuration"),
                 configuration.email_client.token,
+                configuration.email_client.timeout_secs,
             ),
         )
         .expect("server error binding to address"),

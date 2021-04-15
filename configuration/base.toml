@@ -17,3 +17,4 @@ username = "postgres"
 base_url = "https://api.postmarkapp.com"
 sender_email = "catalaniangelo@gmail.com"
 token = "test-secret-token"
+timeout_secs = 10

@@ -1,5 +1,7 @@
+use std::convert::TryInto;
 use std::net::TcpListener;
 
+use reqwest::Url;
 use sqlx::postgres::{
     PgConnectOptions,
     PgPoolOptions,
@@ -11,8 +13,6 @@ use newsletter::domain::SubscriberEmail;
 use newsletter::email_client::EmailClient;
 use newsletter::startup::run;
 use newsletter::telemetry::setup_tracing;
-use reqwest::Url;
-use std::convert::TryInto;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -42,6 +42,7 @@ async fn main() -> std::io::Result<()> {
                 .unwrap_or_else(|e| panic!("invalid base url for email client: {}", e)),
             sender_email,
             configuration.email_client.token,
+            configuration.email_client.timeout_secs,
         ),
     )?
     .await
