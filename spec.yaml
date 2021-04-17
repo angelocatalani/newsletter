@@ -13,7 +13,7 @@ services:
     image:
       registry_type: DOCR
       repository: newsletter
-      tag: latest
+      tag: <TAG>
     instance_count: 1
     instance_size_slug: basic-xs
     name: newsletter

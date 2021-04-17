@@ -101,6 +101,6 @@ jobs:
       - name: Push image to DigitalOcean Container Registry
         run: docker push registry.digitalocean.com/${{ env.docker_registry }}/${{ env.app_name }}:$(echo $GITHUB_SHA | head -c7)
       - name: Update deployment file
-        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/${{ env.docker_registry }}/${{ env.app_name }}:'${TAG}'|' $GITHUB_WORKSPACE/spec.yaml
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's/<TAG>/'"$TAG"'/' $GITHUB_WORKSPACE/spec.yaml
       - name: Deploy to DigitalOcean Apps
-        run: doctl apps create-deployment $(doctl apps list --format ID --no-header) --wait
+        run: doctl apps create-deployment $(doctl apps list --format ID --no-header) --wait true
