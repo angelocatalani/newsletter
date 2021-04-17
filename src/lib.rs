@@ -1,7 +1,5 @@
-//! The `newsletter` entry point.
-pub mod configuration;
+//! The `newsletter` library.
+pub mod app;
 pub mod domain;
 pub mod email_client;
 pub mod routes;
-pub mod startup;
-pub mod telemetry;

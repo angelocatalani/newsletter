@@ -1,14 +1,4 @@
-use std::convert::TryInto;
-use std::net::TcpListener;
-
-use reqwest::{
-    Response,
-    Url,
-};
-use sqlx::postgres::{
-    PgConnectOptions,
-    PgPoolOptions,
-};
+use reqwest::Response;
 use sqlx::{
     Connection,
     PgConnection,
@@ -16,9 +6,12 @@ use sqlx::{
 };
 use uuid::Uuid;
 
-use newsletter::configuration::load_configuration;
-use newsletter::email_client::EmailClient;
-use newsletter::telemetry::setup_tracing;
+use newsletter::app::{
+    load_configuration,
+    setup_tracing,
+    DatabaseSettings,
+    NewsletterApp,
+};
 
 // ensure the `tracing` is instantiated only once
 lazy_static::lazy_static! {
@@ -32,20 +25,20 @@ struct TestApp {
 
 #[actix_rt::test]
 async fn postgres_connection_works() {
-    postgres_connection(
-        &load_configuration()
-            .unwrap()
-            .database
-            .pgserver_connection_options(),
-    )
-    .await;
-    postgres_connection(
-        &load_configuration()
-            .unwrap()
-            .database
-            .database_connection_options(),
-    )
-    .await;
+    let database_options = &load_configuration()
+        .unwrap()
+        .database
+        .pgserver_connection_options();
+    PgConnection::connect_with(database_options)
+        .await
+        .expect("error connecting to postgres");
+    let database_options = &load_configuration()
+        .unwrap()
+        .database
+        .database_connection_options();
+    PgConnection::connect_with(database_options)
+        .await
+        .expect("error connecting to postgres");
 }
 
 #[actix_rt::test]
@@ -141,41 +134,22 @@ async fn subscribe_returns_a_400_with_invalid_fields() {
 /// and they shut down at the end of each test case.
 async fn spawn_app() -> TestApp {
     lazy_static::initialize(&TRACING);
-    let configuration = load_configuration().unwrap();
 
-    // the tcp listens on the ip:port. It does not matter the protocol
-    let tcp_listener = TcpListener::bind(&format!("{}:0", configuration.application.host))
-        .expect("tcp error binding to port");
-    let port = tcp_listener.local_addr().unwrap().port();
+    let mut configuration = load_configuration().unwrap();
+    configuration.database.database_name = Uuid::new_v4().to_string();
+    configuration.application.port = 0;
 
-    let postgres_pool = setup_test_database(
-        configuration.database.pgserver_connection_options(),
-        configuration.database.max_db_connections,
-    )
-    .await;
-    tokio::spawn(
-        newsletter::startup::run(
-            tcp_listener,
-            // cloning a postgres_pool does not create a new pool but it is always the same
-            postgres_pool.clone(),
-            configuration.application.max_pending_connections,
-            EmailClient::new(
-                Url::parse(&configuration.email_client.base_url).unwrap(),
-                configuration
-                    .email_client
-                    .sender_email
-                    .try_into()
-                    .expect("wrong sender email in configuration"),
-                configuration.email_client.token,
-                configuration.email_client.timeout_secs,
-            ),
-        )
-        .expect("server error binding to address"),
-    );
+    let postgres_pool = setup_test_database(configuration.database.clone()).await;
+
+    let app = NewsletterApp::from(configuration)
+        .await
+        .expect("error building app");
+
+    tokio::spawn(app.server.expect("error building server"));
 
     TestApp {
         // the request is done with the protocol:ip:port
-        address: format!("http://127.0.0.1:{}", port),
+        address: format!("http://127.0.0.1:{}", app.port),
         pool: postgres_pool,
     }
 }
@@ -190,23 +164,21 @@ async fn send_post_request(endpoint: &str, body: String) -> Response {
         .expect("Fail to execute post request")
 }
 
-async fn setup_test_database(
-    pgserver_connection_options: PgConnectOptions,
-    max_db_connections: u32,
-) -> PgPool {
-    let mut connection = postgres_connection(&pgserver_connection_options).await;
+async fn setup_test_database(database_settings: DatabaseSettings) -> PgPool {
+    let mut connection =
+        PgConnection::connect_with(&database_settings.pgserver_connection_options())
+            .await
+            .expect("error connecting to postgres");
 
-    let test_database_name = Uuid::new_v4().to_string();
-    sqlx::query(&format!("CREATE DATABASE \"{}\"", test_database_name))
-        .execute(&mut connection)
-        .await
-        .expect("error creating test database");
+    sqlx::query(&format!(
+        "CREATE DATABASE \"{}\"",
+        database_settings.database_name
+    ))
+    .execute(&mut connection)
+    .await
+    .expect("error creating test database");
 
-    let connection_pool = postgres_pool(
-        pgserver_connection_options.database(&test_database_name),
-        max_db_connections,
-    )
-    .await;
+    let connection_pool = NewsletterApp::postgres_pool(database_settings).await;
 
     sqlx::migrate!("./migrations")
         .run(&connection_pool)
@@ -214,18 +186,4 @@ async fn setup_test_database(
         .expect("Failed to migrate the database");
 
     connection_pool
-}
-
-async fn postgres_connection(database_options: &PgConnectOptions) -> PgConnection {
-    PgConnection::connect_with(database_options)
-        .await
-        .expect("error connecting to postgres")
-}
-
-async fn postgres_pool(database_url: PgConnectOptions, max_connections: u32) -> PgPool {
-    PgPoolOptions::new()
-        .max_connections(max_connections)
-        .connect_with(database_url)
-        .await
-        .expect("error creating postgres connection pool")
 }

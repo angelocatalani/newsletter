@@ -12,21 +12,21 @@ use sqlx::postgres::{
     PgSslMode,
 };
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct Settings {
     pub application: ApplicationSettings,
     pub database: DatabaseSettings,
     pub email_client: EmailClientSettings,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct ApplicationSettings {
     pub host: String,
     pub max_pending_connections: u32,
     pub port: u16,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct DatabaseSettings {
     pub connect_timeout_seconds: u64,
     pub database_name: String,
@@ -37,12 +37,12 @@ pub struct DatabaseSettings {
     pub require_ssl: bool,
     pub username: String,
 }
-#[derive(serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct EmailClientSettings {
     pub base_url: String,
     pub sender_email: String,
-    pub token: String,
     pub timeout_secs: u64,
+    pub token: String,
 }
 
 impl ApplicationSettings {
@@ -74,7 +74,7 @@ impl DatabaseSettings {
 custom_error! {
 ///! Custom error for missing env variable or invalid configuration files.
 pub ConfigurationError
-    MissingEnvVar{source:VarError} = "`APP_ENVIRONMENT` is not set \
+    MissingAppEnv{source:VarError} = "`APP_ENVIRONMENT` is not set \
     (possible values: [`local`|`production`]).",
     InvalidConfig{source:ConfigError} = "{source}",
 }
@@ -90,7 +90,7 @@ pub ConfigurationError
 /// # Examples
 ///
 /// ```rust
-/// use newsletter::configuration::load_configuration;
+/// use newsletter::app::load_configuration;
 ///
 /// assert!(load_configuration().is_ok());
 /// ```
