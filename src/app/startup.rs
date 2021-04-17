@@ -34,7 +34,7 @@ impl NewsletterApp {
             web::Data::new(NewsletterApp::postgres_pool(configuration.database).await);
         let email_client = web::Data::new(NewsletterApp::email_client(configuration.email_client));
 
-        // HttpServer handles all transport level concerns.
+        // HttpServer handles all transport level concerns
         let server = HttpServer::new(move || {
             // App is where all the application logic lives: routing, middlewares, request
             // handlers, etc.
