@@ -68,10 +68,10 @@ impl NewsletterApp {
             .max_connections(database_config.max_db_connections)
             .connect_with(database_config.database_connection_options())
             .await
-            .unwrap_or_else(|_| {
+            .unwrap_or_else(|e| {
                 panic!(
-                    "error creating postgres connection pool from config: {:?}",
-                    database_config
+                    "error creating postgres connection pool from config: {:?} {:?}",
+                    database_config,e
                 )
             })
     }

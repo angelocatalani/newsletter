@@ -103,4 +103,4 @@ jobs:
       - name: Update deployment file
         run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's/<TAG>/'"$TAG"'/' $GITHUB_WORKSPACE/spec.yaml
       - name: Deploy to DigitalOcean Apps
-        run: doctl apps create-deployment $(doctl apps list --format ID --no-header) --wait true
+        run: doctl apps update $(doctl apps list --format ID --no-header) --spec spec.yaml
