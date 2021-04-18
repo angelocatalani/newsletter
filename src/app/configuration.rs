@@ -29,7 +29,7 @@ pub struct ApplicationSettings {
 #[derive(Clone, Debug, serde::Deserialize)]
 pub struct DatabaseSettings {
     pub connect_timeout_seconds: u64,
-    pub database_name: String,
+    pub name: String,
     pub host: String,
     pub max_db_connections: u32,
     pub password: String,
@@ -66,8 +66,7 @@ impl DatabaseSettings {
             .ssl_mode(ssl_mode)
     }
     pub fn database_connection_options(&self) -> PgConnectOptions {
-        self.pgserver_connection_options()
-            .database(&self.database_name)
+        self.pgserver_connection_options().database(&self.name)
     }
 }
 

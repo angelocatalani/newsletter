@@ -5,7 +5,7 @@ port = 8000
 
 [database]
 connect_timeout_seconds = 2
-database_name = "newsletter"
+name = "newsletter"
 host = "localhost"
 max_db_connections = 16
 password = "password"

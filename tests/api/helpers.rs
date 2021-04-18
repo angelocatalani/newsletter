@@ -31,7 +31,7 @@ pub async fn spawn_app() -> TestApp {
     lazy_static::initialize(&TRACING);
 
     let mut configuration = load_configuration().unwrap();
-    configuration.database.database_name = Uuid::new_v4().to_string();
+    configuration.database.name = Uuid::new_v4().to_string();
     configuration.application.port = 0;
 
     let postgres_pool = setup_test_database(configuration.database.clone()).await;
@@ -65,13 +65,10 @@ async fn setup_test_database(database_settings: DatabaseSettings) -> PgPool {
             .await
             .expect("error connecting to postgres");
 
-    sqlx::query(&format!(
-        "CREATE DATABASE \"{}\"",
-        database_settings.database_name
-    ))
-    .execute(&mut connection)
-    .await
-    .expect("error creating test database");
+    sqlx::query(&format!("CREATE DATABASE \"{}\"", database_settings.name))
+        .execute(&mut connection)
+        .await
+        .expect("error creating test database");
 
     let connection_pool = NewsletterApp::postgres_pool(database_settings).await;
 

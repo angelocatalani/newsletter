@@ -71,7 +71,7 @@ impl NewsletterApp {
             .unwrap_or_else(|e| {
                 panic!(
                     "error creating postgres connection pool from config: {:?} {:?}",
-                    database_config,e
+                    database_config, e
                 )
             })
     }
