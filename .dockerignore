@@ -5,4 +5,5 @@ target/
 tests/
 scripts/
 .env
+.idea/
 .rustfmt.toml
