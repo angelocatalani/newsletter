@@ -1,2 +1,3 @@
 [application]
+base_url="http://localhost"
 host = "127.0.0.1"

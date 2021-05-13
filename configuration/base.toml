@@ -1,5 +1,4 @@
 [application]
-host = "127.0.0.1"
 max_pending_connections = 128
 port = 8000
 

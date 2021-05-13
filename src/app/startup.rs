@@ -17,7 +17,10 @@ use crate::app::configuration::{
     EmailClientSettings,
     Settings,
 };
-use crate::domain::SubscriberEmail;
+use crate::domain::{
+    AppBaseUrl,
+    SubscriberEmail,
+};
 use crate::email_client::EmailClient;
 use crate::routes::*;
 
@@ -33,6 +36,7 @@ impl NewsletterApp {
         let postgres_pool =
             web::Data::new(NewsletterApp::postgres_pool(configuration.database).await);
         let email_client = web::Data::new(NewsletterApp::email_client(configuration.email_client));
+        let app_base_url = web::Data::new(AppBaseUrl(configuration.application.base_url));
 
         // HttpServer handles all transport level concerns
         let server = HttpServer::new(move || {
@@ -53,6 +57,7 @@ impl NewsletterApp {
                 .route("/subscriptions", web::post().to(subscribe))
                 .app_data(postgres_pool.clone())
                 .app_data(email_client.clone())
+                .app_data(app_base_url.clone())
         })
         .backlog(configuration.application.max_pending_connections)
         .listen(tcp_listener)

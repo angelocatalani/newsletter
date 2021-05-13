@@ -12,6 +12,7 @@ use newsletter::app::{
     DatabaseSettings,
     NewsletterApp,
 };
+use wiremock::MockServer;
 
 // ensure the `tracing` is instantiated only once
 lazy_static::lazy_static! {
@@ -21,6 +22,8 @@ lazy_static::lazy_static! {
 pub struct TestApp {
     pub address: String,
     pub pool: PgPool,
+    pub email_server: MockServer,
+    pub base_url: String,
 }
 
 /// When a `tokio` runtime is shut down all tasks spawned on it are dropped.
@@ -29,11 +32,17 @@ pub struct TestApp {
 /// and they shut down at the end of each test case.
 pub async fn spawn_app() -> TestApp {
     lazy_static::initialize(&TRACING);
+    let email_server = MockServer::start().await;
 
-    let mut configuration = load_configuration().unwrap();
-    configuration.database.name = Uuid::new_v4().to_string();
-    configuration.application.port = 0;
+    let configuration = {
+        let mut c = load_configuration().unwrap();
+        c.database.name = Uuid::new_v4().to_string();
+        c.application.port = 0;
+        c.email_client.base_url = email_server.uri();
+        c
+    };
 
+    let base_url = configuration.application.base_url.clone();
     let postgres_pool = setup_test_database(configuration.database.clone()).await;
 
     let app = NewsletterApp::from(configuration)
@@ -46,6 +55,8 @@ pub async fn spawn_app() -> TestApp {
         // the request is done with the protocol:ip:port
         address: format!("http://127.0.0.1:{}", app.port),
         pool: postgres_pool,
+        email_server,
+        base_url,
     }
 }
 

@@ -21,6 +21,7 @@ pub struct Settings {
 
 #[derive(Clone, Debug, serde::Deserialize)]
 pub struct ApplicationSettings {
+    pub base_url: String,
     pub host: String,
     pub max_pending_connections: u32,
     pub port: u16,
