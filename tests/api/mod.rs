@@ -1,3 +1,4 @@
-pub mod health_check;
-pub mod helpers;
-pub mod subscriptions;
+mod health_check;
+mod helpers;
+mod subscriptions;
+mod subscriptions_confirm;

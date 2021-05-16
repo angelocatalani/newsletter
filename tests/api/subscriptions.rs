@@ -1,4 +1,3 @@
-use crate::api::helpers::*;
 use serde_json::Value;
 use wiremock::matchers::{
     method,
@@ -8,6 +7,8 @@ use wiremock::{
     Mock,
     ResponseTemplate,
 };
+
+use crate::api::helpers::*;
 
 #[actix_rt::test]
 async fn subscribe_returns_a_200_for_valid_form() {
@@ -64,15 +65,6 @@ async fn subscribe_sends_confirmation_email_with_verification_link() {
     send_post_request(&subscribe_end_point, body).await;
     let request = &email_server.received_requests().await.unwrap()[0];
     let email_body: Value = serde_json::from_slice(&request.body).unwrap();
-
-    let extract_confirmation_links = |text: &str| {
-        linkify::LinkFinder::new()
-            .links(&text)
-            .filter(|link| *link.kind() == linkify::LinkKind::Url)
-            .map(|v| v.as_str().to_string())
-            .collect::<Vec<_>>()
-    };
-
     let html_body = email_body["HtmlBody"].as_str().unwrap();
     assert_eq!(extract_confirmation_links(html_body).len(), 1);
     let text_body = email_body["TextBody"].as_str().unwrap();
@@ -81,16 +73,16 @@ async fn subscribe_sends_confirmation_email_with_verification_link() {
     let html_link = extract_confirmation_links(html_body)
         .first()
         .unwrap()
-        .to_owned();
+        .as_str();
 
     let text_link = extract_confirmation_links(text_body)
         .first()
         .unwrap()
-        .to_owned();
+        .as_str();
 
     assert_eq!(
         html_link,
-        format!("{}/subscriptions/confirm", test_app.base_url)
+        &format!("{}/subscriptions/confirm", test_app.base_url)
     );
     assert_eq!(html_link, text_link);
 }

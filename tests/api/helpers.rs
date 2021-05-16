@@ -5,6 +5,7 @@ use sqlx::{
     PgPool,
 };
 use uuid::Uuid;
+use wiremock::MockServer;
 
 use newsletter::app::{
     load_configuration,
@@ -12,7 +13,6 @@ use newsletter::app::{
     DatabaseSettings,
     NewsletterApp,
 };
-use wiremock::MockServer;
 
 // ensure the `tracing` is instantiated only once
 lazy_static::lazy_static! {
@@ -24,6 +24,7 @@ pub struct TestApp {
     pub pool: PgPool,
     pub email_server: MockServer,
     pub base_url: String,
+    pub port: u16,
 }
 
 /// When a `tokio` runtime is shut down all tasks spawned on it are dropped.
@@ -57,6 +58,7 @@ pub async fn spawn_app() -> TestApp {
         pool: postgres_pool,
         email_server,
         base_url,
+        port: app.port,
     }
 }
 
@@ -68,6 +70,14 @@ pub async fn send_post_request(endpoint: &str, body: String) -> Response {
         .send()
         .await
         .expect("Fail to execute post request")
+}
+
+pub async fn send_get_request(endpoint: &str) -> Response {
+    reqwest::Client::new()
+        .get(endpoint)
+        .send()
+        .await
+        .expect("Fail to execute get request")
 }
 
 async fn setup_test_database(database_settings: DatabaseSettings) -> PgPool {
@@ -89,4 +99,11 @@ async fn setup_test_database(database_settings: DatabaseSettings) -> PgPool {
         .expect("Failed to migrate the database");
 
     connection_pool
+}
+
+pub fn extract_confirmation_links(body: &str) -> Vec<linkify::Link> {
+    linkify::LinkFinder::new()
+        .links(&body)
+        .filter(|link| *link.kind() == linkify::LinkKind::Url)
+        .collect::<Vec<_>>()
 }
