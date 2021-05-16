@@ -55,6 +55,7 @@ impl NewsletterApp {
                 // multiple times (in fact it is of type Fn not FnOnce) and the input connection
                 // would not be available anymore at the next call otherwise.
                 .route("/subscriptions", web::post().to(subscribe))
+                .route("/subscriptions/confirm", web::get().to(confirm))
                 .app_data(postgres_pool.clone())
                 .app_data(email_client.clone())
                 .app_data(app_base_url.clone())

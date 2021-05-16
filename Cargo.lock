@@ -1348,6 +1348,7 @@ dependencies = [
  "log",
  "quickcheck",
  "quickcheck_macros",
+ "rand 0.8.3",
  "reqwest",
  "serde 1.0.124",
  "serde_json",

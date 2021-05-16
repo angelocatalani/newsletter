@@ -80,10 +80,6 @@ async fn subscribe_sends_confirmation_email_with_verification_link() {
         .unwrap()
         .as_str();
 
-    assert_eq!(
-        html_link,
-        &format!("{}/subscriptions/confirm", test_app.base_url)
-    );
     assert_eq!(html_link, text_link);
 }
 

@@ -5,6 +5,11 @@ use actix_web::{
     HttpResponse,
 };
 use chrono::Utc;
+use rand::distributions::Alphanumeric;
+use rand::{
+    thread_rng,
+    Rng,
+};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -42,16 +47,21 @@ pub async fn subscribe(
     email_client: web::Data<EmailClient>,
     app_base_url: web::Data<AppBaseUrl>,
 ) -> Result<HttpResponse, RouteError> {
+    todo!("transactional association subscription_token to newly created subscriber");
     let new_subscriber = build_new_subscriber(form)?;
-
+    let subscription_token = generate_subscription_token();
     insert_subscriber(&new_subscriber, postgres_connection).await?;
+
     send_confirmation_email(
         email_client,
         new_subscriber,
-        &format!("{}/subscriptions/confirm", app_base_url.into_inner().0),
+        &format!(
+            "{}/subscriptions/confirm?subscription_token={}",
+            app_base_url.into_inner().0,
+            subscription_token
+        ),
     )
     .await?;
-
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -121,4 +131,12 @@ async fn send_confirmation_email(
         )
         .await?;
     Ok(())
+}
+
+fn generate_subscription_token() -> String {
+    let mut rng = thread_rng();
+    std::iter::repeat_with(|| rng.sample(Alphanumeric))
+        .map(char::from)
+        .take(25)
+        .collect()
 }
