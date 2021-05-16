@@ -14,8 +14,12 @@ use crate::domain::{
     AppBaseUrl,
     MalformedInput,
 };
-use crate::email_client::EmailClient;
+use crate::email_client::{
+    EmailClient,
+    EmailClientError,
+};
 use crate::routes::RouteError;
+use actix_web::web::Data;
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -39,19 +43,18 @@ pub async fn subscribe(
     app_base_url: web::Data<AppBaseUrl>,
 ) -> Result<HttpResponse, RouteError> {
     let new_subscriber = build_new_subscriber(form)?;
-    let sub_link = &format!("{}/subscriptions/confirm", app_base_url.into_inner().0);
+
     insert_subscriber(&new_subscriber, postgres_connection).await?;
-    email_client
-        .send_email(
-            new_subscriber.email,
-            "Newsletter Subscription",
-            &sub_link,
-            &sub_link,
-        )
-        .await?;
+    send_confirmation_email(
+        email_client,
+        new_subscriber,
+        &format!("{}/subscriptions/confirm", app_base_url.into_inner().0),
+    )
+    .await?;
 
     Ok(HttpResponse::Ok().finish())
 }
+
 #[tracing::instrument(name = "validating form data", skip(form))]
 fn build_new_subscriber(form: web::Form<FormData>) -> Result<NewSubscriber, MalformedInput> {
     Ok(NewSubscriber {
@@ -90,5 +93,32 @@ async fn insert_subscriber(
         tracing::error!("Failed to execute query: {:?}", e);
         e
     })?;
+    Ok(())
+}
+
+#[tracing::instrument(
+    name = "sending confirmation email",
+    skip(email_client, new_subscriber)
+)]
+async fn send_confirmation_email(
+    email_client: Data<EmailClient>,
+    new_subscriber: NewSubscriber,
+    sub_link: &str,
+) -> Result<(), EmailClientError> {
+    email_client
+        .send_email(
+            new_subscriber.email,
+            "Newsletter Subscription",
+            &format!(
+                "Welcome to our newsletter!<br />Click <a href=\"{}\">here</a> to confirm your \
+                 subscription.",
+                sub_link
+            ),
+            &format!(
+                "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
+                sub_link
+            ),
+        )
+        .await?;
     Ok(())
 }

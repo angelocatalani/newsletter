@@ -65,14 +65,34 @@ async fn subscribe_sends_confirmation_email_with_verification_link() {
     let request = &email_server.received_requests().await.unwrap()[0];
     let email_body: Value = serde_json::from_slice(&request.body).unwrap();
 
+    let extract_confirmation_links = |text: &str| {
+        linkify::LinkFinder::new()
+            .links(&text)
+            .filter(|link| *link.kind() == linkify::LinkKind::Url)
+            .map(|v| v.as_str().to_string())
+            .collect::<Vec<_>>()
+    };
+
+    let html_body = email_body["HtmlBody"].as_str().unwrap();
+    assert_eq!(extract_confirmation_links(html_body).len(), 1);
+    let text_body = email_body["TextBody"].as_str().unwrap();
+    assert_eq!(extract_confirmation_links(text_body).len(), 1);
+
+    let html_link = extract_confirmation_links(html_body)
+        .first()
+        .unwrap()
+        .to_owned();
+
+    let text_link = extract_confirmation_links(text_body)
+        .first()
+        .unwrap()
+        .to_owned();
+
     assert_eq!(
-        &format!("{}/subscriptions/confirm", test_app.base_url),
-        &email_body["HtmlBody"].as_str().unwrap()
+        html_link,
+        format!("{}/subscriptions/confirm", test_app.base_url)
     );
-    assert_eq!(
-        &email_body["TextBody"].as_str().unwrap(),
-        &email_body["HtmlBody"].as_str().unwrap()
-    );
+    assert_eq!(html_link, text_link);
 }
 
 #[actix_rt::test]
