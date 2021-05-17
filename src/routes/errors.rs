@@ -14,6 +14,8 @@ pub RouteError
     InvalidFormData{source:MalformedInput} = "Invalid body data: {source}",
     DatabaseError{source: sqlx::Error} = "{source}",
     EmailError{source: EmailClientError} = "{source}",
+    MissingTokenError{subscription_token: String} = "The subscription_token:\
+    {subscription_token} does not exists",
 }
 
 impl ResponseError for RouteError {
@@ -22,6 +24,7 @@ impl ResponseError for RouteError {
             RouteError::InvalidFormData { .. } => StatusCode::BAD_REQUEST,
             RouteError::DatabaseError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             RouteError::EmailError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            RouteError::MissingTokenError { .. } => StatusCode::NOT_FOUND,
         }
     }
 
@@ -30,6 +33,7 @@ impl ResponseError for RouteError {
             RouteError::InvalidFormData { .. } => HttpResponse::BadRequest().finish(),
             RouteError::DatabaseError { .. } => HttpResponse::InternalServerError().finish(),
             RouteError::EmailError { .. } => HttpResponse::InternalServerError().finish(),
+            RouteError::MissingTokenError { .. } => HttpResponse::NotFound().finish(),
         }
     }
 }

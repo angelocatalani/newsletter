@@ -66,4 +66,6 @@ async fn subscriptions_confirm_works() {
     println!("{}", subscription_confirm_endpoint.as_str());
     let response = send_get_request(subscription_confirm_endpoint.as_str()).await;
     assert_eq!(200, response.status().as_u16());
+
+    todo!("check status is updated and row is deleted")
 }
