@@ -39,3 +39,11 @@ envs:
   - key: APP_APPLICATION__BASE_URL
     scope: RUN_TIME
     value: ${_self.APP_URL}
+  - key: APP_EMAIL_CLIENT__TOKEN
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:B8SL6MezbEHtMpkNuzDlUFEFMLsBJmOu:C5o3L4fsKDsRh4zFWh4W4xE63ZsILXBlhA4BnKGIYCcq9e6UNFOL8L13QI0XEyZKC2fEdA==]
+  - key: APP_EMAIL_CLIENT__SENDER_EMAIL
+    scope: RUN_TIME
+    type: SECRET
+    value: EV[1:6cdfvUHQusIKJ6Yxdt3pmRjySMSPYSUe:htGVpJRQ4PKyjNL7NJMKMT8dsmR8jhh6W5Wk4oGdw+bvIeV+PLm1D4s10Z4=]
