@@ -63,7 +63,7 @@ impl NewsletterApp {
         .backlog(configuration.application.max_pending_connections)
         .listen(tcp_listener)
         .map(HttpServer::run);
-        Ok(NewsletterApp { port, server })
+        Ok(NewsletterApp { server, port })
     }
 
     pub async fn postgres_pool(database_config: DatabaseSettings) -> PgPool {
