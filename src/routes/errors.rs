@@ -22,8 +22,9 @@ impl ResponseError for RouteError {
     fn status_code(&self) -> StatusCode {
         match self {
             RouteError::InvalidFormData { .. } => StatusCode::BAD_REQUEST,
-            RouteError::DatabaseError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-            RouteError::EmailError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            RouteError::DatabaseError { .. } | RouteError::EmailError { .. } => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             RouteError::MissingTokenError { .. } => StatusCode::NOT_FOUND,
         }
     }
@@ -31,8 +32,9 @@ impl ResponseError for RouteError {
     fn error_response(&self) -> HttpResponse {
         match self {
             RouteError::InvalidFormData { .. } => HttpResponse::BadRequest().finish(),
-            RouteError::DatabaseError { .. } => HttpResponse::InternalServerError().finish(),
-            RouteError::EmailError { .. } => HttpResponse::InternalServerError().finish(),
+            RouteError::DatabaseError { .. } | RouteError::EmailError { .. } => {
+                HttpResponse::InternalServerError().finish()
+            }
             RouteError::MissingTokenError { .. } => HttpResponse::NotFound().finish(),
         }
     }
