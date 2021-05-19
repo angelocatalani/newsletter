@@ -24,7 +24,7 @@ FROM debian:buster-slim AS runtime
 WORKDIR app
 # install OpenSSL because it is dynamically linked by some of our dependencies
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends openssl \
+    && apt-get -y install ca-certificates libssl-dev \
     && apt-get autoremove -y \
     && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
