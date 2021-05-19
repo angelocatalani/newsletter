@@ -6,5 +6,5 @@
 [![Actions Status](https://github.com/angelocatalani/newsletter/actions/workflows/scheduled_deploy.yml/badge.svg)](https://github.com/angelocatalani/newsletter/actions)
 [![Actions Status](https://github.com/angelocatalani/newsletter/actions/workflows/scheduled_audit.yml/badge.svg)](https://github.com/angelocatalani/newsletter/actions)
 
-Implementation with some personal additions, of the web application described
-in this amazing book: [Zero To Production In Rust](https://www.zero2prod.com/index.html?country=Italy&discount_code=VAT20).
+Implementation with some personal additions, of the web application described in this amazing
+book: [Zero To Production In Rust](https://www.zero2prod.com/index.html?country=Italy&discount_code=VAT20).

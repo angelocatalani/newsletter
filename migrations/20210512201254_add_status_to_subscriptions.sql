@@ -1,1 +1,2 @@
-ALTER TABLE subscriptions ADD column status TEXT NULL;
+ALTER TABLE subscriptions
+    ADD column status TEXT NULL;

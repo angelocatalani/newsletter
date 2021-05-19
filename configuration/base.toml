@@ -13,7 +13,7 @@ require_ssl = false
 username = "postgres"
 
 [email_client]
-base_url = "https://api.postmarkapp.com"
+base_url = "https://api.mailjet.com/v3.1/"
 sender_email = "testemail@gmail.com"
 token = "test-secret-token"
 timeout_secs = 10

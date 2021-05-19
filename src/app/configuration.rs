@@ -38,6 +38,7 @@ pub struct DatabaseSettings {
     pub require_ssl: bool,
     pub username: String,
 }
+
 #[derive(Clone, Debug, serde::Deserialize)]
 pub struct EmailClientSettings {
     pub base_url: String,

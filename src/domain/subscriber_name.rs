@@ -31,6 +31,7 @@ impl AsRef<str> for SubscriberName {
         &self.0
     }
 }
+
 #[cfg(test)]
 mod tests {
     use std::convert::TryFrom;
@@ -55,11 +56,13 @@ mod tests {
     fn empty_name_is_invalid() {
         assert_err!(SubscriberName::try_from("".to_string()));
     }
+
     #[test]
     fn whitespace_name_is_invalid() {
         assert_err!(SubscriberName::try_from(" ".repeat(MAX_LENGTH)));
         assert_err!(SubscriberName::try_from(" ".to_string()));
     }
+
     #[test]
     fn too_long_name_is_invalid() {
         assert_err!(SubscriberName::try_from("a".repeat(MAX_LENGTH + 1)));
@@ -71,6 +74,7 @@ mod tests {
         pub second_name: String,
         pub full_name: String,
     }
+
     impl quickcheck::Arbitrary for ValidNameFixture {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
             ValidNameFixture {

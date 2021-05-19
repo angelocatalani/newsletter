@@ -81,7 +81,7 @@ jobs:
 
   build:
     name: Build & Deploy
-    needs: [fmt,test]
+    needs: [ fmt,test ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master

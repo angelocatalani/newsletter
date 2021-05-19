@@ -1,4 +1,3 @@
-use crate::routes::RouteError;
 use actix_web::{
     web,
     HttpResponse,
@@ -11,6 +10,8 @@ use sqlx::{
     Transaction,
 };
 use uuid::Uuid;
+
+use crate::routes::RouteError;
 
 #[derive(Deserialize)]
 pub struct Parameter {

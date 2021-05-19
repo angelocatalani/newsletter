@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use actix_web::web::Data;
 use actix_web::{
     web,
     HttpResponse,
@@ -28,7 +29,6 @@ use crate::email_client::{
     EmailClientError,
 };
 use crate::routes::RouteError;
-use actix_web::web::Data;
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -37,13 +37,13 @@ pub struct FormData {
 }
 
 #[tracing::instrument(
-    name = "adding new subscriber",
-    skip(form,postgres_connection,email_client),
-    fields(
-        email = %form.email,
-        name = %form.name,
-        app_base_url = %app_base_url.0
-    )
+name = "adding new subscriber",
+skip(form, postgres_connection, email_client),
+fields(
+email = % form.email,
+name = % form.name,
+app_base_url = % app_base_url.0
+)
 )]
 pub async fn subscribe(
     form: web::Form<FormData>,

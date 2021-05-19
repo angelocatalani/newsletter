@@ -14,7 +14,7 @@ use crate::api::helpers::*;
 async fn subscribe_returns_a_200_for_valid_form() {
     let test_app = spawn_app().await;
     Mock::given(method("POST"))
-        .and(path("/email"))
+        .and(path("/send"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&test_app.email_server)
@@ -30,7 +30,7 @@ async fn subscribe_returns_a_200_for_valid_form() {
 async fn subscribe_adds_new_pending_subscriber_to_postgres() {
     let test_app = spawn_app().await;
     Mock::given(method("POST"))
-        .and(path("/email"))
+        .and(path("/send"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&test_app.email_server)
@@ -55,7 +55,7 @@ async fn subscribe_sends_confirmation_email_with_verification_link() {
     let test_app = spawn_app().await;
     let email_server = test_app.email_server;
     Mock::given(method("POST"))
-        .and(path("/email"))
+        .and(path("/send"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&email_server)
@@ -65,9 +65,9 @@ async fn subscribe_sends_confirmation_email_with_verification_link() {
     send_post_request(&subscribe_end_point, body).await;
     let request = &email_server.received_requests().await.unwrap()[0];
     let email_body: Value = serde_json::from_slice(&request.body).unwrap();
-    let html_body = email_body["HtmlBody"].as_str().unwrap();
+    let html_body = email_body["Messages"][0]["HTMLPart"].as_str().unwrap();
     assert_eq!(extract_confirmation_links(html_body).len(), 1);
-    let text_body = email_body["TextBody"].as_str().unwrap();
+    let text_body = email_body["Messages"][0]["TextPart"].as_str().unwrap();
     assert_eq!(extract_confirmation_links(text_body).len(), 1);
 
     let html_link = extract_confirmation_links(html_body)

@@ -1,10 +1,3 @@
-use crate::api::helpers::{
-    extract_confirmation_links,
-    send_get_request,
-    send_post_request,
-    spawn_app,
-    TestApp,
-};
 use reqwest::{
     Response,
     Url,
@@ -18,6 +11,14 @@ use wiremock::matchers::{
 use wiremock::{
     Mock,
     ResponseTemplate,
+};
+
+use crate::api::helpers::{
+    extract_confirmation_links,
+    send_get_request,
+    send_post_request,
+    spawn_app,
+    TestApp,
 };
 
 struct ConfirmRequestDetails {
@@ -43,7 +44,7 @@ async fn subscriptions_confirm_works() {
     let test_app = spawn_app().await;
 
     Mock::given(method("POST"))
-        .and(path("/email"))
+        .and(path("/send"))
         .respond_with(ResponseTemplate::new(200))
         .expect(1)
         .mount(&test_app.email_server)
@@ -126,7 +127,8 @@ async fn get_subscription_confirm_url(test_app: &TestApp) -> Url {
         .unwrap()
         .body
         .to_owned();
-    let html_body = serde_json::from_slice::<Value>(request_body).unwrap()["HtmlBody"]
+    let html_body = serde_json::from_slice::<Value>(request_body).unwrap()["Messages"][0]
+        ["HTMLPart"]
         .as_str()
         .unwrap()
         .to_owned();

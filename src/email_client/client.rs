@@ -4,9 +4,9 @@ use reqwest::{
     Client,
     Url,
 };
-use serde::Serialize;
 
 use crate::domain::SubscriberEmail;
+use crate::email_client::request::EmailRequest;
 use crate::email_client::EmailClientError;
 
 pub struct EmailClient {
@@ -14,16 +14,6 @@ pub struct EmailClient {
     base_url: Url,
     sender: SubscriberEmail,
     token: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
-struct EmailRequest<'a> {
-    from: &'a str,
-    to: &'a str,
-    subject: &'a str,
-    text_body: &'a str,
-    html_body: &'a str,
 }
 
 impl EmailClient {
@@ -44,27 +34,26 @@ impl EmailClient {
             token,
         }
     }
+
     pub async fn send_email(
         &self,
         recipient: SubscriberEmail,
         subject: &str,
-        html_content: &str,
-        text_content: &str,
+        html_part: &str,
+        text_part: &str,
     ) -> Result<(), EmailClientError> {
-        let request = EmailRequest {
-            from: self.sender.as_ref(),
-            to: recipient.as_ref(),
-            subject,
-            text_body: text_content,
-            html_body: html_content,
-        };
         let smtp_response = self
             .http_client
-            .post(self.base_url.join("email")?)
-            .header("Accept", "application/json")
+            .post(self.base_url.join("send")?)
             .header("Content-Type", "application/json")
-            .header("X-Postmark-Server-Token", self.token.as_str())
-            .json(&request)
+            .header("Authorization", self.token.as_str())
+            .json(&EmailRequest::new(
+                self.sender.as_ref(),
+                recipient.as_ref(),
+                subject,
+                html_part,
+                text_part,
+            ))
             .send()
             .await?;
         if smtp_response.status().is_success() {
@@ -102,10 +91,6 @@ mod tests {
         StatusCode,
         Url,
     };
-    use serde_json::{
-        json,
-        Value,
-    };
     use wiremock::matchers::body_json;
     use wiremock::matchers::{
         header,
@@ -126,28 +111,17 @@ mod tests {
         let sender_email: String = SafeEmail().fake();
         SubscriberEmail::try_from(sender_email).unwrap()
     }
+
     fn sentence() -> String {
         Sentence(1..2).fake()
     }
+
     fn paragraph() -> String {
         Paragraph(1..2).fake()
     }
+
     fn token() -> String {
         String::from("token")
-    }
-    fn body_from(
-        sender: &SubscriberEmail,
-        recipient: &SubscriberEmail,
-        subject: &str,
-        content: &str,
-    ) -> Value {
-        json!({
-            "From": sender.as_ref(),
-            "To": recipient.as_ref(),
-            "Subject": subject,
-            "TextBody": content,
-            "HtmlBody": content
-        })
     }
 
     #[tokio::test]
@@ -159,20 +133,29 @@ mod tests {
         let recipient = email();
 
         let server = MockServer::start().await;
+
         Mock::given(method("POST"))
-            .and(path("/email"))
-            .and(header("Accept", "application/json"))
+            .and(path("/send"))
             .and(header("Content-Type", "application/json"))
-            .and(header("X-Postmark-Server-Token", token.as_str()))
-            .and(body_json(&body_from(
-                &sender, &recipient, &subject, &content,
+            .and(header("Authorization", token.as_str()))
+            .and(body_json(&EmailRequest::new(
+                sender.as_ref(),
+                recipient.as_ref(),
+                &subject,
+                &content,
+                &content,
             )))
             .respond_with(ResponseTemplate::new(200))
             .expect(1)
             .mount(&server)
             .await;
 
-        let email_client = EmailClient::new(Url::parse(&server.uri()).unwrap(), sender, token, 10);
+        let email_client = EmailClient::new(
+            Url::parse(&server.uri()).unwrap(),
+            sender,
+            token.clone(),
+            10,
+        );
 
         assert_ok!(
             email_client
