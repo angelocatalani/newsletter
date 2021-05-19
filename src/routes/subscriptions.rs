@@ -158,8 +158,7 @@ async fn send_confirmation_email(
             new_subscriber.email,
             "Newsletter Subscription",
             &format!(
-                "Welcome to our newsletter!<br />Click <a href=\"{}\">here</a> to confirm your \
-                 subscription.",
+                "Welcome to our newsletter!<br />Visit {} to confirm your subscription <br />",
                 sub_link
             ),
             &format!(
