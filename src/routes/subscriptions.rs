@@ -68,7 +68,11 @@ pub async fn subscribe(
             subscription_token
         ),
     )
-    .await?;
+    .await
+    .map_err(|e| {
+        tracing::error!("error sending email {:?}", e);
+        e
+    })?;
     Ok(HttpResponse::Ok().finish())
 }
 
