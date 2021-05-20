@@ -43,7 +43,7 @@ impl NewsletterApp {
             // App is where all the application logic lives: routing, middlewares, request
             // handlers, etc.
             App::new()
-                .wrap(TracingLogger)
+                .wrap(TracingLogger::default())
                 // route takes two parameters: path and route
                 // path -> template string
                 // route -> Route Struct implements the Route trait.
