@@ -1,4 +1,4 @@
-pub use errors::RouteError;
+pub use errors::NewsletterError;
 pub use health_check::health_check;
 pub use subscriptions::subscribe;
 pub use subscriptions_confirm::confirm;

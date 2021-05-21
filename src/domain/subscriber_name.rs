@@ -2,8 +2,6 @@ use std::convert::TryFrom;
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::domain::errors::MalformedInput;
-
 const FORBIDDEN_CHARS: [char; 9] = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
 const MAX_LENGTH: usize = 256;
 
@@ -11,7 +9,7 @@ const MAX_LENGTH: usize = 256;
 pub struct SubscriberName(String);
 
 impl TryFrom<String> for SubscriberName {
-    type Error = MalformedInput;
+    type Error = String;
 
     fn try_from(name: String) -> Result<Self, Self::Error> {
         let is_empty_or_whitespace = name.trim().is_empty();
@@ -19,7 +17,7 @@ impl TryFrom<String> for SubscriberName {
         let contains_forbidden_characters = name.chars().any(|g| FORBIDDEN_CHARS.contains(&g));
 
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
-            Err(MalformedInput::InvalidName { name })
+            Err(format!("Invalid name: {}", name))
         } else {
             Ok(Self(name))
         }

@@ -2,43 +2,48 @@ use actix_web::{
     web,
     HttpResponse,
 };
+use anyhow::Context;
 use serde::Deserialize;
 use sqlx::{
-    Error,
     PgPool,
     Postgres,
     Transaction,
 };
 use uuid::Uuid;
 
-use crate::routes::RouteError;
+use crate::routes::NewsletterError;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Parameter {
     subscription_token: String,
 }
 
-#[tracing::instrument(
-    name = "confirming new subscriber",
-    skip(postgres_connection, parameter)
-)]
+#[tracing::instrument(name = "Confirming new subscriber", skip(postgres_connection))]
 pub async fn confirm(
     postgres_connection: web::Data<PgPool>,
     parameter: web::Query<Parameter>,
-) -> Result<HttpResponse, RouteError> {
-    let mut transaction = postgres_connection.begin().await?;
+) -> Result<HttpResponse, NewsletterError> {
+    let mut transaction = postgres_connection
+        .begin()
+        .await
+        .context("Failed to acquire database pool to confirm subscription")?;
     let subscriber_id =
         get_subscriber_id_and_remove_token(&parameter.subscription_token, &mut transaction)
             .await
             .map_err(|e| match e {
-                Error::RowNotFound => RouteError::MissingTokenError {
-                    subscription_token: parameter.subscription_token.clone(),
-                },
-                _ => e.into(),
+                sqlx::Error::RowNotFound => {
+                    NewsletterError::MissingTokenError(parameter.subscription_token.clone())
+                }
+                other => NewsletterError::UnexpectedError(other.into()),
             })?;
 
-    confirm_subscription(&subscriber_id, &mut transaction).await?;
-    transaction.commit().await?;
+    confirm_subscription(&subscriber_id, &mut transaction)
+        .await
+        .context("Failed to confirm subscription")?;
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit transaction to confirm subscriptions")?;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -54,11 +59,7 @@ async fn get_subscriber_id_and_remove_token(
         subscription_token
     )
     .fetch_one(postgres_transaction)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(deleted_record.subscriber_id)
 }
 
@@ -73,10 +74,6 @@ async fn confirm_subscription(
         subscriber_id
     )
     .execute(postgres_transaction)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(())
 }

@@ -6,8 +6,8 @@ use newsletter::app::NewsletterApp;
 async fn main() -> std::io::Result<()> {
     setup_tracing("newsletter".into(), "info".into());
 
-    let configuration =
-        load_configuration().unwrap_or_else(|e| panic!("error loading configuration: {}", e));
+    let configuration = load_configuration()
+        .unwrap_or_else(|error| panic!("Error:{e} loading configuration.\n{e:?}", e = error));
 
     let app = NewsletterApp::from(configuration).await?;
     app.server?.await

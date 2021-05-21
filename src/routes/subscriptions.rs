@@ -5,6 +5,7 @@ use actix_web::{
     web,
     HttpResponse,
 };
+use anyhow::Context;
 use chrono::Utc;
 use rand::distributions::Alphanumeric;
 use rand::{
@@ -19,16 +20,10 @@ use sqlx::{
 };
 use uuid::Uuid;
 
+use crate::domain::AppBaseUrl;
 use crate::domain::NewSubscriber;
-use crate::domain::{
-    AppBaseUrl,
-    MalformedInput,
-};
-use crate::email_client::{
-    EmailClient,
-    EmailClientError,
-};
-use crate::routes::RouteError;
+use crate::email_client::EmailClient;
+use crate::routes::NewsletterError;
 
 #[derive(Deserialize)]
 pub struct FormData {
@@ -37,7 +32,7 @@ pub struct FormData {
 }
 
 #[tracing::instrument(
-name = "adding new subscriber",
+name = "Adding new subscriber",
 skip(form, postgres_connection, email_client),
 fields(
 email = % form.email,
@@ -50,14 +45,26 @@ pub async fn subscribe(
     postgres_connection: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
     app_base_url: web::Data<AppBaseUrl>,
-) -> Result<HttpResponse, RouteError> {
-    let new_subscriber = build_new_subscriber(form)?;
+) -> Result<HttpResponse, NewsletterError> {
+    // this error must be explicitly converted to a ValidationError because
+    // for String do not implement the Error trait
+    let new_subscriber = build_new_subscriber(form).map_err(NewsletterError::ValidationError)?;
     let subscription_token = generate_subscription_token();
 
-    let mut transaction = postgres_connection.begin().await?;
-    let subscriber_id = insert_subscriber(&new_subscriber, &mut transaction).await?;
-    store_token(&subscription_token, &subscriber_id, &mut transaction).await?;
-    transaction.commit().await?;
+    let mut transaction = postgres_connection
+        .begin()
+        .await
+        .context("Failed to start SQL transaction to store a new subscriber")?;
+    let subscriber_id = insert_subscriber(&new_subscriber, &mut transaction)
+        .await
+        .context("Failed to insert new subscriber")?;
+    store_token(&subscription_token, &subscriber_id, &mut transaction)
+        .await
+        .context("Failed to store token")?;
+    transaction
+        .commit()
+        .await
+        .context("Failed to commit SQL transaction to store a new subscriber")?;
 
     send_confirmation_email(
         email_client,
@@ -68,31 +75,24 @@ pub async fn subscribe(
             subscription_token
         ),
     )
-    .await
-    .map_err(|e| {
-        tracing::error!("error sending email {:?}", e);
-        e
-    })?;
+    .await?;
+    // we do not need to log here the error because it is propagated up to the
+    // tracing_actix_web::TracingLogger,
+    //.map_err(|e| { tracing::error!("error sending email {:?}", e);e })?;
     Ok(HttpResponse::Ok().finish())
 }
 
-#[tracing::instrument(name = "validating form data", skip(form))]
-fn build_new_subscriber(form: web::Form<FormData>) -> Result<NewSubscriber, MalformedInput> {
+#[tracing::instrument(name = "Validating form data", skip(form))]
+fn build_new_subscriber(form: web::Form<FormData>) -> Result<NewSubscriber, String> {
     Ok(NewSubscriber {
-        name: form.0.name.try_into().map_err(|e| {
-            tracing::error!("{:?}", e);
-            e
-        })?,
-        email: form.0.email.try_into().map_err(|e| {
-            tracing::error!("{:?}", e);
-            e
-        })?,
+        name: form.0.name.try_into()?,
+        email: form.0.email.try_into()?,
     })
 }
 
 #[tracing::instrument(
-    name = "inserting new subscriber details in the database",
-    skip(new_subscriber, postgres_transaction)
+    name = "Inserting new subscriber details in the database",
+    skip(postgres_transaction)
 )]
 async fn insert_subscriber(
     new_subscriber: &NewSubscriber,
@@ -110,16 +110,12 @@ async fn insert_subscriber(
         Utc::now()
     )
     .execute(postgres_transaction)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(subscriber_id)
 }
 
 #[tracing::instrument(
-    name = "storing a new token in the database",
+    name = "Storing a new token in the database",
     skip(postgres_transaction)
 )]
 async fn store_token(
@@ -136,23 +132,19 @@ async fn store_token(
         subscriber_id,
     )
     .execute(postgres_transaction)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(())
 }
 
 #[tracing::instrument(
-    name = "sending confirmation email",
+    name = "Sending confirmation email",
     skip(email_client, new_subscriber)
 )]
 async fn send_confirmation_email(
     email_client: Data<EmailClient>,
     new_subscriber: NewSubscriber,
     sub_link: &str,
-) -> Result<(), EmailClientError> {
+) -> Result<(), anyhow::Error> {
     email_client
         .send_email(
             new_subscriber.email,

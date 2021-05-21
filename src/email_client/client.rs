@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Context;
 use reqwest::{
     Client,
     Url,
@@ -7,7 +8,6 @@ use reqwest::{
 
 use crate::domain::SubscriberEmail;
 use crate::email_client::request::EmailRequest;
-use crate::email_client::EmailClientError;
 
 pub struct EmailClient {
     http_client: Client,
@@ -17,22 +17,28 @@ pub struct EmailClient {
 }
 
 impl EmailClient {
-    pub fn new(base_url: Url, sender: SubscriberEmail, token: String, timeout_secs: u64) -> Self {
-        Self {
+    pub fn new(
+        base_url: Url,
+        sender: SubscriberEmail,
+        token: String,
+        timeout_secs: u64,
+    ) -> Result<Self, anyhow::Error> {
+        Ok(Self {
             http_client: Client::builder()
                 .timeout(Duration::from_secs(timeout_secs))
                 .build()
-                .unwrap_or_else(|error| {
-                    panic!(
-                        "unrecoverable error: {} creating mail client with parameters: base_url: \
-                         {} sender: {:#?} token: {} timeout_secs: {}",
-                        error, base_url, sender, token, timeout_secs,
-                    )
-                }),
+                .context(format!(
+                    "Error creating mail client with:\nbase_url: {}\nsender: {}\ntoken: \
+                     {}***\ntimeout_secs: {}",
+                    base_url,
+                    sender.as_ref(),
+                    &token[0..2],
+                    timeout_secs
+                ))?,
             base_url,
             sender,
             token,
-        }
+        })
     }
 
     pub async fn send_email(
@@ -41,7 +47,7 @@ impl EmailClient {
         subject: &str,
         html_part: &str,
         text_part: &str,
-    ) -> Result<(), EmailClientError> {
+    ) -> Result<(), anyhow::Error> {
         let smtp_response = self
             .http_client
             .post(self.base_url.join("send")?)
@@ -56,20 +62,12 @@ impl EmailClient {
             ))
             .send()
             .await?;
-        if smtp_response.status().is_success() {
-            Ok(())
-        } else {
-            Err(EmailClientError::ErrorResponse {
-                canonical_reason: smtp_response
-                    .status()
-                    .canonical_reason()
-                    .unwrap_or("unknown_failure")
-                    .to_string(),
-                code: smtp_response.status().to_string(),
-                is_client_error: smtp_response.status().is_client_error(),
-                is_server_error: smtp_response.status().is_server_error(),
-            })
-        }
+        smtp_response.error_for_status().context(format!(
+            "Error sending email to: {} with subject: {}",
+            recipient.as_ref(),
+            subject
+        ))?;
+        Ok(())
     }
 }
 
@@ -77,10 +75,7 @@ impl EmailClient {
 mod tests {
     use std::convert::TryFrom;
 
-    use claim::{
-        assert_matches,
-        assert_ok,
-    };
+    use claim::assert_ok;
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{
         Paragraph,
@@ -155,7 +150,8 @@ mod tests {
             sender,
             token.clone(),
             10,
-        );
+        )
+        .unwrap();
 
         assert_ok!(
             email_client
@@ -176,24 +172,13 @@ mod tests {
                 .await;
 
             let email_client =
-                EmailClient::new(Url::parse(&server.uri()).unwrap(), email(), token(), 10);
+                EmailClient::new(Url::parse(&server.uri()).unwrap(), email(), token(), 10).unwrap();
 
             let response = email_client
                 .send_email(email(), &sentence(), &paragraph(), &paragraph())
                 .await;
 
-            assert_matches!(
-               response.unwrap_err(),
-               EmailClientError::ErrorResponse {
-                   canonical_reason,
-                   code,
-                   is_client_error,
-                   is_server_error
-               } if canonical_reason==status_code.canonical_reason().unwrap()
-                    && code==status_code.to_string()
-                    && is_client_error==status_code.is_client_error()
-                    && is_server_error==status_code.is_server_error()
-            );
+            assert!(response.is_err());
         }
     }
 
@@ -214,17 +199,13 @@ mod tests {
             email(),
             token(),
             timeout,
-        );
+        )
+        .unwrap();
 
         let response = email_client
             .send_email(email(), &sentence(), &paragraph(), &paragraph())
             .await;
 
-        assert_matches!(
-            response.unwrap_err(),
-            EmailClientError::InvalidRequest {
-                source
-            } if source.is_timeout()
-        );
+        assert!(response.is_err());
     }
 }

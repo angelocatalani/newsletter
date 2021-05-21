@@ -2,9 +2,6 @@ use std::convert::TryFrom;
 
 use validator::validate_email;
 
-use crate::domain::errors::MalformedInput;
-use crate::domain::errors::MalformedInput::InvalidEmail;
-
 #[derive(Clone, Debug)]
 pub struct SubscriberEmail(String);
 
@@ -15,13 +12,13 @@ impl AsRef<str> for SubscriberEmail {
 }
 
 impl TryFrom<String> for SubscriberEmail {
-    type Error = MalformedInput;
+    type Error = String;
 
     fn try_from(email: String) -> Result<Self, Self::Error> {
         if validate_email(email.clone()) {
             Ok(SubscriberEmail(email))
         } else {
-            Err(InvalidEmail { email })
+            Err(format!("Invalid email: {}", email))
         }
     }
 }

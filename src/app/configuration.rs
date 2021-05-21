@@ -1,12 +1,10 @@
 use std::env;
-use std::env::VarError;
 
+use anyhow::Context;
 use config::{
     Config,
-    ConfigError,
     File,
 };
-use custom_error::custom_error;
 use sqlx::postgres::{
     PgConnectOptions,
     PgSslMode,
@@ -72,14 +70,6 @@ impl DatabaseSettings {
     }
 }
 
-custom_error! {
-///! Custom error for missing env variable or invalid configuration files.
-pub ConfigurationError
-    MissingAppEnv{source:VarError} = "`APP_ENVIRONMENT` is not set \
-    (possible values: [`local`|`production`]).",
-    InvalidConfig{source:ConfigError} = "{source}",
-}
-
 /// Load the configuration from the directory: `configuration`.
 ///
 /// It fails if:
@@ -95,17 +85,12 @@ pub ConfigurationError
 ///
 /// assert!(load_configuration().is_ok());
 /// ```
-pub fn load_configuration() -> Result<Settings, ConfigurationError> {
+pub fn load_configuration() -> Result<Settings, anyhow::Error> {
     let mut config = Config::new();
     config.merge(File::with_name("configuration/base").required(true))?;
-    let app_environment = env::var("APP_ENVIRONMENT")?;
+    let app_environment =
+        env::var("APP_ENVIRONMENT").context("`APP_ENVIRONMENT` is missing or invalid")?;
     config.merge(File::with_name(&format!("configuration/{}", app_environment)).required(true))?;
-
-    // Add in settings from environment variables (with a prefix of APP and '__' as
-    // separator) E.g. `APP_APPLICATION__PORT=5001 would set
-    // `Settings.application.port`
-    // settings.merge(config::Environment::with_prefix("app").separator("__"))?;
     config.merge(config::Environment::with_prefix("app").separator("__"))?;
-
     config.try_into().map(Ok)?
 }
