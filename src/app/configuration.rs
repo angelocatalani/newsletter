@@ -5,6 +5,7 @@ use config::{
     Config,
     File,
 };
+use derivative::Derivative;
 use sqlx::postgres::{
     PgConnectOptions,
     PgSslMode,
@@ -24,24 +25,25 @@ pub struct ApplicationSettings {
     pub max_pending_connections: u32,
     pub port: u16,
 }
-
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Derivative, Clone, Debug, serde::Deserialize)]
 pub struct DatabaseSettings {
     pub connect_timeout_seconds: u64,
     pub name: String,
     pub host: String,
     pub max_db_connections: u32,
+    #[derivative(Debug = "ignore")]
     pub password: String,
     pub port: u16,
     pub require_ssl: bool,
     pub username: String,
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Derivative, Clone, Debug, serde::Deserialize)]
 pub struct EmailClientSettings {
     pub base_url: String,
     pub sender_email: String,
     pub timeout_secs: u64,
+    #[derivative(Debug = "ignore")]
     pub token: String,
 }
 

@@ -8,11 +8,14 @@ use reqwest::{
 
 use crate::domain::SubscriberEmail;
 use crate::email_client::request::EmailRequest;
+use derivative::Derivative;
 
+#[derive(Derivative, Debug)]
 pub struct EmailClient {
     http_client: Client,
     base_url: Url,
     sender: SubscriberEmail,
+    #[derivative(Debug = "ignore")]
     token: String,
 }
 

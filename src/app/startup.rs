@@ -76,24 +76,21 @@ impl NewsletterApp {
             .await
             .unwrap_or_else(|e| {
                 panic!(
-                    "Error creating postgres connection pool from config: {:?} {:?}",
-                    database_config, e
+                    "Error: {:?} creating Postgresql pool with settings:{:?}",
+                    e, database_config
                 )
             })
     }
 
     fn email_client(client_config: EmailClientSettings) -> EmailClient {
         let base_url = Url::parse(&client_config.base_url).unwrap_or_else(|e| {
-            panic!(
-                "Invalid base url: {} for email client: {}",
-                client_config.base_url, e
-            )
+            panic!("Error: {} parsing base url: {}", e, client_config.base_url)
         });
 
         let sender_email: SubscriberEmail = client_config
             .sender_email
             .try_into()
-            .unwrap_or_else(|e| panic!("Invalid sender email: {}", e));
+            .unwrap_or_else(|e| panic!("Error: {} parsing sender email from config", e));
 
         EmailClient::new(
             base_url,
@@ -101,6 +98,6 @@ impl NewsletterApp {
             client_config.token,
             client_config.timeout_secs,
         )
-        .unwrap_or_else(|e| panic!("Cannot create email client: {}", e))
+        .unwrap_or_else(|e| panic!("Error: {} creating EmailClient", e))
     }
 }
