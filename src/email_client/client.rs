@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use anyhow::Context;
+use derivative::Derivative;
 use reqwest::{
     Client,
     Url,
@@ -8,7 +9,6 @@ use reqwest::{
 
 use crate::domain::SubscriberEmail;
 use crate::email_client::request::EmailRequest;
-use derivative::Derivative;
 
 #[derive(Derivative, Debug)]
 pub struct EmailClient {

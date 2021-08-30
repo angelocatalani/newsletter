@@ -5,7 +5,15 @@ use sqlx::{
     PgPool,
 };
 use uuid::Uuid;
-use wiremock::MockServer;
+use wiremock::matchers::{
+    method,
+    path,
+};
+use wiremock::{
+    Mock,
+    MockServer,
+    ResponseTemplate,
+};
 
 use newsletter::app::{
     load_configuration,

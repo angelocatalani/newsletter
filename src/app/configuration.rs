@@ -25,6 +25,7 @@ pub struct ApplicationSettings {
     pub max_pending_connections: u32,
     pub port: u16,
 }
+
 #[derive(Derivative, Clone, Debug, serde::Deserialize)]
 pub struct DatabaseSettings {
     pub connect_timeout_seconds: u64,
