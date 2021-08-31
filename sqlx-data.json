@@ -20,6 +20,24 @@
       ]
     }
   },
+  "7b57e2776a245ba1602f638121550485e2219a6ccaaa62b5ec3e4683e33a3b5f": {
+    "query": "\n        SELECT email\n        FROM subscriptions\n        WHERE status = 'confirmed'\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "email",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "c1103ea1bd4f102ca9930dc495664563f5341fa27d6e2811233d1aa9855bf002": {
     "query": "\n        UPDATE subscriptions SET status = 'confirmed' WHERE id=$1\n        ",
     "describe": {
