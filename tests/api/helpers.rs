@@ -1,4 +1,8 @@
-use reqwest::Response;
+use reqwest::{
+    Response,
+    Url,
+};
+use serde_json::Value;
 use sqlx::{
     Connection,
     PgConnection,
@@ -114,4 +118,31 @@ pub fn extract_confirmation_links(body: &str) -> Vec<linkify::Link> {
         .links(&body)
         .filter(|link| *link.kind() == linkify::LinkKind::Url)
         .collect::<Vec<_>>()
+}
+
+pub async fn get_subscription_confirm_url(test_app: &TestApp) -> Url {
+    let request_body = &test_app
+        .email_server
+        .received_requests()
+        .await
+        .unwrap()
+        .first()
+        .unwrap()
+        .body
+        .to_owned();
+    let html_body = serde_json::from_slice::<Value>(request_body).unwrap()["Messages"][0]
+        ["HTMLPart"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let subscription_confirm_endpoint = extract_confirmation_links(&html_body)
+        .first()
+        .unwrap()
+        .as_str();
+
+    let mut subscription_confirm_url = Url::parse(subscription_confirm_endpoint).unwrap();
+    subscription_confirm_url
+        .set_port(Some(test_app.port))
+        .unwrap();
+    subscription_confirm_url
 }

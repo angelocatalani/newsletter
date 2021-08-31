@@ -13,8 +13,10 @@ use wiremock::{
     ResponseTemplate,
 };
 
+use crate::api::helpers;
 use crate::api::helpers::{
     extract_confirmation_links,
+    get_subscription_confirm_url,
     send_get_request,
     send_post_request,
     spawn_app,
@@ -115,31 +117,4 @@ async fn get_pending_subscriber_id(test_app: &TestApp, subscription_token: &str)
     .await
     .expect("Failed to fetch saved subscription_tokens");
     pending_subscriber.id
-}
-
-async fn get_subscription_confirm_url(test_app: &TestApp) -> Url {
-    let request_body = &test_app
-        .email_server
-        .received_requests()
-        .await
-        .unwrap()
-        .first()
-        .unwrap()
-        .body
-        .to_owned();
-    let html_body = serde_json::from_slice::<Value>(request_body).unwrap()["Messages"][0]
-        ["HTMLPart"]
-        .as_str()
-        .unwrap()
-        .to_owned();
-    let subscription_confirm_endpoint = extract_confirmation_links(&html_body)
-        .first()
-        .unwrap()
-        .as_str();
-
-    let mut subscription_confirm_url = Url::parse(subscription_confirm_endpoint).unwrap();
-    subscription_confirm_url
-        .set_port(Some(test_app.port))
-        .unwrap();
-    subscription_confirm_url
 }

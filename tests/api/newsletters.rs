@@ -10,10 +10,13 @@ use wiremock::{
 
 use crate::api::helpers;
 use crate::api::helpers::{
+    get_subscription_confirm_url,
+    send_get_request,
     send_post_request,
     spawn_app,
     TestApp,
 };
+use reqwest::Url;
 
 #[actix_rt::test]
 async fn emails_are_not_sent_to_pending_users() {
@@ -40,7 +43,7 @@ async fn emails_are_not_sent_to_pending_users() {
     assert_eq!(200, response.status());
 }
 
-pub async fn create_pending_user(test_app: &TestApp) {
+pub async fn create_pending_user(test_app: &TestApp) -> Url {
     let _mock_guard = Mock::given(method("POST"))
         .and(path("/send"))
         .respond_with(ResponseTemplate::new(200))
@@ -51,6 +54,15 @@ pub async fn create_pending_user(test_app: &TestApp) {
     let subscriptions_endpoint = format!("{}/subscriptions", test_app.address);
     let subscriptions_body = String::from("name=le%20guin&email=ursula_le_guin%40gmail.com");
     send_post_request(&subscriptions_endpoint, subscriptions_body)
+        .await
+        .error_for_status()
+        .unwrap();
+    get_subscription_confirm_url(&test_app).await
+}
+
+pub async fn create_confirmed_user(test_app: &TestApp) {
+    let subscription_confirm_url = create_pending_user(test_app).await;
+    send_get_request(subscription_confirm_url.as_str())
         .await
         .error_for_status()
         .unwrap();
