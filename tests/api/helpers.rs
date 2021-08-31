@@ -9,15 +9,7 @@ use sqlx::{
     PgPool,
 };
 use uuid::Uuid;
-use wiremock::matchers::{
-    method,
-    path,
-};
-use wiremock::{
-    Mock,
-    MockServer,
-    ResponseTemplate,
-};
+use wiremock::MockServer;
 
 use newsletter::app::{
     load_configuration,
@@ -79,6 +71,15 @@ pub async fn send_post_request(endpoint: &str, body: String) -> Response {
         .post(endpoint)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
+        .send()
+        .await
+        .expect("Fail to execute post request")
+}
+
+pub async fn send_json_post_request(endpoint: &str, body: &Value) -> Response {
+    reqwest::Client::new()
+        .post(endpoint)
+        .json(&body)
         .send()
         .await
         .expect("Fail to execute post request")

@@ -56,6 +56,7 @@ impl NewsletterApp {
                 // would not be available anymore at the next call otherwise.
                 .route("/subscriptions", web::post().to(subscribe))
                 .route("/subscriptions/confirm", web::get().to(confirm))
+                .route("/newsletters", web::post().to(newsletters))
                 .app_data(postgres_pool.clone())
                 .app_data(email_client.clone())
                 .app_data(app_base_url.clone())

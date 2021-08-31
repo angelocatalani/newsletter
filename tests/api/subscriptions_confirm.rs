@@ -1,8 +1,4 @@
-use reqwest::{
-    Response,
-    Url,
-};
-use serde_json::Value;
+use reqwest::Response;
 use uuid::Uuid;
 use wiremock::matchers::{
     method,
@@ -13,9 +9,7 @@ use wiremock::{
     ResponseTemplate,
 };
 
-use crate::api::helpers;
 use crate::api::helpers::{
-    extract_confirmation_links,
     get_subscription_confirm_url,
     send_get_request,
     send_post_request,

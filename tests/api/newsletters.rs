@@ -1,3 +1,4 @@
+use reqwest::Url;
 use wiremock::matchers::{
     any,
     method,
@@ -8,25 +9,45 @@ use wiremock::{
     ResponseTemplate,
 };
 
-use crate::api::helpers;
 use crate::api::helpers::{
     get_subscription_confirm_url,
     send_get_request,
+    send_json_post_request,
     send_post_request,
     spawn_app,
     TestApp,
 };
-use reqwest::Url;
 
 #[actix_rt::test]
 async fn emails_are_not_sent_to_pending_users() {
     let test_app = spawn_app().await;
-
     create_pending_user(&test_app).await;
-
     Mock::given(any())
         .respond_with(ResponseTemplate::new(200))
         .expect(0)
+        .mount(&test_app.email_server)
+        .await;
+    let newsletters_endpoint = format!("{}/newsletters", test_app.address);
+    let body = serde_json::json!({
+        "title": "any_title",
+        "content": {
+            "text": "any_text",
+            "html": "any_html",
+        }
+    });
+
+    let response = send_json_post_request(&newsletters_endpoint, &body).await;
+    assert_eq!(200, response.status());
+}
+
+#[actix_rt::test]
+async fn emails_are_sent_to_confirmed_users() {
+    let test_app = spawn_app().await;
+    create_confirmed_user(&test_app).await;
+    Mock::given(method("POST"))
+        .and(path("/send"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
         .mount(&test_app.email_server)
         .await;
 
@@ -38,8 +59,7 @@ async fn emails_are_not_sent_to_pending_users() {
             "html": "any_html",
         }
     });
-    let response = send_post_request(&newsletters_endpoint, body.to_string()).await;
-
+    let response = send_json_post_request(&newsletters_endpoint, &body).await;
     assert_eq!(200, response.status());
 }
 
