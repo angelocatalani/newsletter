@@ -80,6 +80,8 @@ jobs:
           command: test
 
   build:
+    # skip build because DigitalOcean free trial expired
+    if: "false"
     name: Build & Deploy
     needs: [ fmt,test ]
     runs-on: ubuntu-latest
