@@ -40,11 +40,15 @@ pub async fn newsletters(
     let confirmed_subscribers = get_confirmed_subscribers(postgres_connection)
         .await
         .context("Failed to retrieve confirmed subscribers from db")?;
+
     for subscriber in confirmed_subscribers {
         match subscriber.email.try_into() {
-            Ok(subscriber_email) => send_article(&email_client, subscriber_email, &article)
-                .await
-                .context("Failed to send new article")?,
+            Ok(subscriber_email) => {
+                send_article(&email_client, subscriber_email, &article)
+                    .await
+                    .map_err(|e| tracing::warn!("Error sending new article: {}", e))
+                    .ok();
+            }
             Err(e) => {
                 tracing::warn!("Invalid email retrieved from db: {}", e)
             }
