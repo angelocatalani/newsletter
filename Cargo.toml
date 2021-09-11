@@ -36,6 +36,7 @@ uuid = { version = "~0.8", features = ["v4"] }
 unicode-segmentation = "~1.7"
 validator = "0.13.0"
 base64 = "0.13.0"
+sha3 = "0.9.1"
 
 [dev-dependencies]
 actix-rt = "~2"

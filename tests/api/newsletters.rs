@@ -18,6 +18,9 @@ use crate::api::helpers::{
     spawn_app,
     TestApp,
 };
+use sha3::Digest;
+use sqlx::PgPool;
+use uuid::Uuid;
 
 #[actix_rt::test]
 async fn emails_are_not_sent_to_pending_users() {
@@ -36,7 +39,7 @@ async fn emails_are_not_sent_to_pending_users() {
             "html": "any_html",
         }
     });
-
+    create_authenticated_user("any_user", "any_password", &test_app.pool).await;
     let response = send_authenticated_json_post_request(
         &newsletters_endpoint,
         &body,
@@ -50,7 +53,7 @@ async fn emails_are_not_sent_to_pending_users() {
 #[actix_rt::test]
 async fn emails_are_sent_to_confirmed_users() {
     let test_app = spawn_app().await;
-    create_confirmed_user(&test_app).await;
+    create_confirmed_subscriber(&test_app).await;
     Mock::given(method("POST"))
         .and(path("/send"))
         .respond_with(ResponseTemplate::new(200))
@@ -66,6 +69,7 @@ async fn emails_are_sent_to_confirmed_users() {
             "html": "any_html",
         }
     });
+    create_authenticated_user("any_user", "any_password", &test_app.pool).await;
     let response = send_authenticated_json_post_request(
         &newsletters_endpoint,
         &body,
@@ -111,10 +115,26 @@ pub async fn create_pending_user(test_app: &TestApp) -> Url {
     get_subscription_confirm_url(&test_app).await
 }
 
-pub async fn create_confirmed_user(test_app: &TestApp) {
+async fn create_confirmed_subscriber(test_app: &TestApp) {
     let subscription_confirm_url = create_pending_user(test_app).await;
     send_get_request(subscription_confirm_url.as_str())
         .await
         .error_for_status()
         .unwrap();
+}
+
+async fn create_authenticated_user(username: &str, password: &str, pool: &PgPool) {
+    let password_hash = format!("{:x}", sha3::Sha3_256::digest(password.as_ref()));
+    sqlx::query!(
+        r#"
+        INSERT INTO users (id, username, password_hash)
+        VALUES ($1, $2, $3)
+        "#,
+        Uuid::new_v4(),
+        username,
+        password_hash,
+    )
+    .execute(pool)
+    .await
+    .unwrap();
 }

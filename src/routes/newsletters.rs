@@ -13,6 +13,8 @@ use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::NewsletterError;
 use actix_web::http::HeaderMap;
+use sha3::Digest;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct Article {
@@ -31,6 +33,8 @@ name = "Sending newsletter to confirmed users",
 skip(article, postgres_connection, email_client),
 fields(
 title = % article.title,
+username=tracing::field::Empty,
+uuid=tracing::field::Empty,
 )
 )]
 pub async fn newsletters(
@@ -39,9 +43,14 @@ pub async fn newsletters(
     email_client: web::Data<EmailClient>,
     request: web::HttpRequest,
 ) -> Result<HttpResponse, NewsletterError> {
-    let _credentials = get_credentials(request.headers()).map_err(NewsletterError::AuthError)?;
+    let credentials = get_credentials(request.headers()).map_err(NewsletterError::AuthError)?;
+    tracing::Span::current().record("username", &tracing::field::display(&credentials.username));
+    let authenticated_uuid = validate_credentials(credentials, postgres_connection.as_ref())
+        .await
+        .map_err(NewsletterError::AuthError)?;
 
-    let confirmed_subscribers = get_confirmed_subscribers(postgres_connection)
+    tracing::Span::current().record("uuid", &tracing::field::display(authenticated_uuid));
+    let confirmed_subscribers = get_confirmed_subscribers(postgres_connection.as_ref())
         .await
         .context("Failed to retrieve confirmed subscribers from db")?;
 
@@ -93,13 +102,42 @@ fn get_credentials(headers: &HeaderMap) -> anyhow::Result<Credentials> {
     })
 }
 
+struct AuthenticatedUser {
+    id: Uuid,
+}
+
+async fn validate_credentials(
+    credentials: Credentials,
+    postgres_connection: &PgPool,
+) -> anyhow::Result<Uuid> {
+    let password_hash = format!(
+        "{:x}",
+        sha3::Sha3_256::digest(credentials.password.as_ref())
+    );
+    let user = sqlx::query_as!(
+        AuthenticatedUser,
+        r#"
+        SELECT id
+        FROM users
+        WHERE username=$1 AND password_hash=$2
+        "#,
+        credentials.username,
+        password_hash
+    )
+    .fetch_optional(postgres_connection)
+    .await
+    .context("Error fetching user from dm")?
+    .context("User not found")?;
+    Ok(user.id)
+}
+
 struct ConfirmedSubscriber {
     email: String,
 }
 
 #[tracing::instrument(name = "Retrieving confirmed subscribers", skip(postgres_connection))]
 async fn get_confirmed_subscribers(
-    postgres_connection: web::Data<PgPool>,
+    postgres_connection: &PgPool,
 ) -> Result<Vec<ConfirmedSubscriber>, sqlx::Error> {
     let rows = sqlx::query_as!(
         ConfirmedSubscriber,
@@ -109,7 +147,7 @@ async fn get_confirmed_subscribers(
         WHERE status = 'confirmed'
         "#,
     )
-    .fetch_all(postgres_connection.as_ref())
+    .fetch_all(postgres_connection)
     .await?;
     Ok(rows)
 }
