@@ -76,6 +76,21 @@ pub async fn send_post_request(endpoint: &str, body: String) -> Response {
         .expect("Fail to execute post request")
 }
 
+pub async fn send_authenticated_json_post_request(
+    endpoint: &str,
+    body: &Value,
+    username: &str,
+    password: &str,
+) -> Response {
+    reqwest::Client::new()
+        .post(endpoint)
+        .json(&body)
+        .basic_auth(username, Some(password))
+        .send()
+        .await
+        .expect("Fail to execute post request")
+}
+
 pub async fn send_json_post_request(endpoint: &str, body: &Value) -> Response {
     reqwest::Client::new()
         .post(endpoint)

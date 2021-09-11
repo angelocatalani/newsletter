@@ -11,6 +11,7 @@ use wiremock::{
 
 use crate::api::helpers::{
     get_subscription_confirm_url,
+    send_authenticated_json_post_request,
     send_get_request,
     send_json_post_request,
     send_post_request,
@@ -36,7 +37,13 @@ async fn emails_are_not_sent_to_pending_users() {
         }
     });
 
-    let response = send_json_post_request(&newsletters_endpoint, &body).await;
+    let response = send_authenticated_json_post_request(
+        &newsletters_endpoint,
+        &body,
+        "any_user",
+        "any_password",
+    )
+    .await;
     assert_eq!(200, response.status());
 }
 
@@ -59,7 +66,13 @@ async fn emails_are_sent_to_confirmed_users() {
             "html": "any_html",
         }
     });
-    let response = send_json_post_request(&newsletters_endpoint, &body).await;
+    let response = send_authenticated_json_post_request(
+        &newsletters_endpoint,
+        &body,
+        "any_user",
+        "any_password",
+    )
+    .await;
     assert_eq!(200, response.status());
 }
 
