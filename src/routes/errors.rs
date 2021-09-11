@@ -1,6 +1,9 @@
 use std::error::Error;
 
-use actix_web::http::StatusCode;
+use actix_web::http::{
+    header,
+    StatusCode,
+};
 use actix_web::{
     HttpResponse,
     ResponseError,
@@ -17,6 +20,8 @@ pub enum NewsletterError {
     // soruce as String but maps to a different error code
     #[error("Confirmation failed for missing token: {0}")]
     MissingTokenError(String),
+    #[error("Authentication Error: {0}")]
+    AuthError(#[source] anyhow::Error),
     #[error("Unexpected internal error: {0}")]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -39,6 +44,7 @@ impl ResponseError for NewsletterError {
             NewsletterError::ValidationError(_) => StatusCode::BAD_REQUEST,
             NewsletterError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             NewsletterError::MissingTokenError(_) => StatusCode::NOT_FOUND,
+            NewsletterError::AuthError(_) => StatusCode::UNAUTHORIZED,
         }
     }
 
@@ -49,6 +55,9 @@ impl ResponseError for NewsletterError {
             NewsletterError::MissingTokenError(missing_token) => {
                 HttpResponse::NotFound().json(&format!("Token: {} not found", missing_token))
             }
+            NewsletterError::AuthError(_) => HttpResponse::Unauthorized()
+                .append_header((header::WWW_AUTHENTICATE, "Basic realm=\"publish\""))
+                .finish(),
         }
     }
 }

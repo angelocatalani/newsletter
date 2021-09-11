@@ -63,6 +63,24 @@ async fn emails_are_sent_to_confirmed_users() {
     assert_eq!(200, response.status());
 }
 
+#[actix_rt::test]
+async fn requests_missing_authorization_are_rejected() {
+    let newsletters_endpoint = format!("{}/newsletters", spawn_app().await.address);
+    let body = serde_json::json!({
+        "title": "any_title",
+        "content": {
+            "text": "any_text",
+            "html": "any_html",
+        }
+    });
+    let response = send_json_post_request(&newsletters_endpoint, &body).await;
+    assert_eq!(401, response.status());
+    assert_eq!(
+        "Basic realm=\"publish\"",
+        response.headers().get("WWW-Authenticate").unwrap()
+    );
+}
+
 pub async fn create_pending_user(test_app: &TestApp) -> Url {
     let _mock_guard = Mock::given(method("POST"))
         .and(path("/send"))
