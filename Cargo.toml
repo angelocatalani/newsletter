@@ -37,6 +37,7 @@ unicode-segmentation = "~1.7"
 validator = "0.13.0"
 base64 = "0.13.0"
 sha3 = "0.9.1"
+argon2 = { version = "0.3.0", features = ["std"] }
 
 [dev-dependencies]
 actix-rt = "~2"

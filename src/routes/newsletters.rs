@@ -13,6 +13,12 @@ use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::NewsletterError;
 use actix_web::http::HeaderMap;
+use argon2::{
+    Argon2,
+    PasswordHash,
+    PasswordHasher,
+    PasswordVerifier,
+};
 use sha3::Digest;
 use uuid::Uuid;
 
@@ -104,30 +110,35 @@ fn get_credentials(headers: &HeaderMap) -> anyhow::Result<Credentials> {
 
 struct AuthenticatedUser {
     id: Uuid,
+    phc_password: String,
 }
 
 async fn validate_credentials(
     credentials: Credentials,
     postgres_connection: &PgPool,
 ) -> anyhow::Result<Uuid> {
-    let password_hash = format!(
-        "{:x}",
-        sha3::Sha3_256::digest(credentials.password.as_ref())
-    );
     let user = sqlx::query_as!(
         AuthenticatedUser,
         r#"
-        SELECT id
+        SELECT id,phc_password
         FROM users
-        WHERE username=$1 AND password_hash=$2
+        WHERE username=$1
         "#,
         credentials.username,
-        password_hash
     )
     .fetch_optional(postgres_connection)
     .await
-    .context("Error fetching user from dm")?
+    .context("Error fetching user from database")?
     .context("User not found")?;
+
+    Argon2::default()
+        .verify_password(
+            credentials.password.as_bytes(),
+            &PasswordHash::new(&user.phc_password)
+                .context("Invalid password format: not PHC format")?,
+        )
+        .context("Wrong password")?;
+
     Ok(user.id)
 }
 

@@ -18,6 +18,11 @@ use crate::api::helpers::{
     spawn_app,
     TestApp,
 };
+use argon2::password_hash::SaltString;
+use argon2::{
+    Argon2,
+    PasswordHasher,
+};
 use sha3::Digest;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -124,10 +129,14 @@ async fn create_confirmed_subscriber(test_app: &TestApp) {
 }
 
 async fn create_authenticated_user(username: &str, password: &str, pool: &PgPool) {
-    let password_hash = format!("{:x}", sha3::Sha3_256::digest(password.as_ref()));
+    let salt = SaltString::generate(&mut rand::thread_rng());
+    let password_hash = Argon2::default()
+        .hash_password(password.as_ref(), &salt)
+        .unwrap()
+        .to_string();
     sqlx::query!(
         r#"
-        INSERT INTO users (id, username, password_hash)
+        INSERT INTO users (id, username, phc_password)
         VALUES ($1, $2, $3)
         "#,
         Uuid::new_v4(),
