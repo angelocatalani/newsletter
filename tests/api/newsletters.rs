@@ -23,7 +23,6 @@ use argon2::{
     Argon2,
     PasswordHasher,
 };
-use sha3::Digest;
 use sqlx::PgPool;
 use uuid::Uuid;
 

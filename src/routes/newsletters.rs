@@ -16,10 +16,8 @@ use actix_web::http::HeaderMap;
 use argon2::{
     Argon2,
     PasswordHash,
-    PasswordHasher,
     PasswordVerifier,
 };
-use sha3::Digest;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -82,6 +80,7 @@ struct Credentials {
     password: String,
 }
 
+#[tracing::instrument(name = "Retrieving user credentials", skip(headers))]
 fn get_credentials(headers: &HeaderMap) -> anyhow::Result<Credentials> {
     let authorization_header: &str = headers
         .get("Authorization")
@@ -113,33 +112,54 @@ struct AuthenticatedUser {
     phc_password: String,
 }
 
+#[tracing::instrument(
+    name = "Validating user credentials",
+    skip(credentials, postgres_connection)
+)]
 async fn validate_credentials(
     credentials: Credentials,
     postgres_connection: &PgPool,
 ) -> anyhow::Result<Uuid> {
-    let user = sqlx::query_as!(
+    let user = retrieve_authenticated_user(&credentials.username, postgres_connection).await?;
+    let span = tracing::Span::current();
+    let password = credentials.password;
+    let phc_password = user.phc_password;
+    span.in_scope(|| verify_password(password, phc_password))
+        .await?;
+
+    Ok(user.id)
+}
+async fn retrieve_authenticated_user(
+    username: &str,
+    postgres_connection: &PgPool,
+) -> anyhow::Result<AuthenticatedUser> {
+    sqlx::query_as!(
         AuthenticatedUser,
         r#"
         SELECT id,phc_password
         FROM users
         WHERE username=$1
         "#,
-        credentials.username,
+        username,
     )
     .fetch_optional(postgres_connection)
     .await
     .context("Error fetching user from database")?
-    .context("User not found")?;
+    .context("User not found")
+}
 
-    Argon2::default()
-        .verify_password(
-            credentials.password.as_bytes(),
-            &PasswordHash::new(&user.phc_password)
-                .context("Invalid password format: not PHC format")?,
-        )
-        .context("Wrong password")?;
-
-    Ok(user.id)
+async fn verify_password(candidate_password: String, expected_hash: String) -> anyhow::Result<()> {
+    actix_web::rt::task::spawn_blocking(move || {
+        Argon2::default()
+            .verify_password(
+                candidate_password.as_bytes(),
+                &PasswordHash::new(&expected_hash)
+                    .context("Invalid password format: not PHC format")?,
+            )
+            .context("Wrong password")
+    })
+    .await
+    .context("Error spawning thread")?
 }
 
 struct ConfirmedSubscriber {
