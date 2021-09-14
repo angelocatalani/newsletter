@@ -120,7 +120,14 @@ async fn validate_credentials(
     credentials: Credentials,
     postgres_connection: &PgPool,
 ) -> anyhow::Result<Uuid> {
-    let user = retrieve_authenticated_user(&credentials.username, postgres_connection).await?;
+    let user = retrieve_authenticated_user(&credentials.username, postgres_connection)
+        .await
+        .unwrap_or_else(|_| AuthenticatedUser {
+            id: Default::default(),
+            phc_password: "$argon2id$v=19$m=15000,t=2,p=1$gZiV/M1gPc22ElAH/Jh1Hw$CWOrkoo7oJBQ/\
+                           iyh7uJ0LO2aLEfrHwTWllSAxT0zRno"
+                .to_string(),
+        });
     let span = tracing::Span::current();
     let password = credentials.password;
     let phc_password = user.phc_password;
