@@ -18,6 +18,7 @@ use argon2::{
     PasswordHash,
     PasswordVerifier,
 };
+use std::time::Duration;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -156,17 +157,28 @@ async fn retrieve_authenticated_user(
 }
 
 async fn verify_password(candidate_password: String, expected_hash: String) -> anyhow::Result<()> {
-    actix_web::rt::task::spawn_blocking(move || {
-        Argon2::default()
-            .verify_password(
-                candidate_password.as_bytes(),
-                &PasswordHash::new(&expected_hash)
-                    .context("Invalid password format: not PHC format")?,
-            )
-            .context("Wrong password")
-    })
-    .await
-    .context("Error spawning thread")?
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    rayon::spawn(move || {
+        let pwd_hash =
+            PasswordHash::new(&expected_hash).context("Invalid password format: not PHC format");
+        let password_check_result = pwd_hash.and_then(|hash| {
+            Argon2::default()
+                .verify_password(candidate_password.as_bytes(), &hash)
+                .context("Wrong password")
+        });
+
+        sender
+            .send(password_check_result)
+            .map_err(|e| {
+                tracing::warn!("Error sending password check result to the receiver channel");
+                e
+            })
+            .ok();
+    });
+    tokio::time::timeout(Duration::from_secs(1), receiver)
+        .await
+        .context("Error getting password check response: expired timeout (1 seconds)")?
+        .context("Error getting password check response")?
 }
 
 struct ConfirmedSubscriber {
