@@ -54,7 +54,8 @@ pub async fn spawn_app() -> TestApp {
         .await
         .expect("error building app");
 
-    tokio::spawn(app.server.expect("error building server"));
+    let server = app.server;
+    tokio::task::spawn_blocking(|| server.expect("error building server"));
 
     TestApp {
         // the request is done with the protocol:ip:port
